@@ -4130,9 +4130,19 @@ const InstitutionCaregiverDashboard = () => {
                                 </>
                               )}
                   </div>
-                            <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                              Active
-                            </span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                                Active
+                              </span>
+                              {(isNurse || isDoctor) && (
+                                <button
+                                  onClick={() => setShowMedicationModal(true)}
+                                  className="px-3 py-1 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                                >
+                                  Chart
+                                </button>
+                              )}
+                            </div>
                   </div>
                 </div>
                       ))}
@@ -5094,6 +5104,8 @@ const InstitutionCaregiverDashboard = () => {
           clientName={selectedClient.name || selectedClient.fullName || 'Unknown Client'}
           nurseId={user?.uid}
           nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
+          institutionId={userProfile?.institutionId || selectedClient?.institutionId}
+          registrationMedications={selectedClient.medications || []}
           onSave={() => {
             setShowMedicationModal(false);
             // Refresh client data if needed
