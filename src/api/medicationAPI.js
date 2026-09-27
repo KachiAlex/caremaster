@@ -74,6 +74,7 @@ export const medicationAPI = {
             route: data.route,
             doctorId: data.doctorId,
             doctorName: data.doctorName,
+            metadata: data.metadata,
             createdAt: data.createdAt?.toDate?.() || data.createdAt,
             updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
           });
