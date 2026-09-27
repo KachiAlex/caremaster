@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { searchPatients, getPatientByPatientId } from '../api/patientsAPI';
 import { useUser } from '../contexts/UserContext';
+import { formatDateOfBirth } from '../utils/formatters';
 
 const PatientSearch = ({ onSelectPatient, placeholder }) => {
   const { userProfile } = useUser();
@@ -100,15 +101,7 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return 'N/A';
-    try {
-      const d = date.toDate ? date.toDate() : new Date(date);
-      return d.toLocaleDateString();
-    } catch (e) {
-      return 'N/A';
-    }
-  };
+  const formatDate = (date) => formatDateOfBirth(date);
 
   return (
     <div className="relative w-full">

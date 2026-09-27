@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import sessionManager from '../utils/sessionManager';
 import { useResponsive, useRole, useBackNavigation } from '../hooks';
@@ -107,6 +107,9 @@ import AssignmentCalendar from '../components/AssignmentCalendar';
 import DashboardOverview from '../components/dashboard/DashboardOverview';
 import GlobalAllergyAlert from '../components/GlobalAllergyAlert';
 import NewConversationModal from '../components/NewConversationModal';
+import ClinicalTextBlock from '../components/ClinicalTextBlock';
+import clientActivitiesAPI from '../api/clientActivitiesAPI';
+import { formatDateOfBirth, calculateAge, formatDateTime, splitList } from '../utils/formatters';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -244,6 +247,18 @@ const InstitutionCaregiverDashboard = () => {
   const [clientDiagnostics, setClientDiagnostics] = useState([]);
   const [clientInvoices, setClientInvoices] = useState([]);
   const [expandedRecords, setExpandedRecords] = useState({});
+  // Pagination caps for record lists — grows by this many per "Show more"
+  const RECORDS_PAGE = 10;
+  const [recordsVisible, setRecordsVisible] = useState({});
+  // Clinical notes feed (client_activities rows with activityType 'clinical_note')
+  const [clinicalNotes, setClinicalNotes] = useState([]);
+  const [clinicalNotesTotal, setClinicalNotesTotal] = useState(0);
+  const [clinicalNotesLimit, setClinicalNotesLimit] = useState(20);
+  const [loadingClinicalNotes, setLoadingClinicalNotes] = useState(false);
+  const [showClinicalNoteForm, setShowClinicalNoteForm] = useState(false);
+  const [clinicalNoteDraft, setClinicalNoteDraft] = useState({ noteType: 'Progress Note', text: '' });
+  const [savingClinicalNote, setSavingClinicalNote] = useState(false);
+  const loadClinicalNotesRef = useRef(null);
   const [profileImage, setProfileImage] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
@@ -1170,6 +1185,33 @@ const InstitutionCaregiverDashboard = () => {
 
     loadMedicalData();
 
+    // Load the clinical-notes feed (client_activities entries). Each note is
+    // its own timestamped, attributed row — paginated via `limit` so history
+    // can grow indefinitely without bloating the client profile.
+    const loadClinicalNotes = async (limitCount = 20) => {
+      try {
+        setLoadingClinicalNotes(true);
+        const notesQuery = query(
+          collection(db, 'clientActivities'),
+          where('clientId', '==', clientId),
+          where('activityType', '==', 'clinical_note')
+        );
+        const snap = await getDocs(notesQuery);
+        const notes = [];
+        snap.forEach((d) => notes.push({ id: d.id, ...d.data() }));
+        notes.sort((a, b) => (toDate(b.createdAt)?.getTime?.() || 0) - (toDate(a.createdAt)?.getTime?.() || 0));
+        if (cancelled) return;
+        setClinicalNotes(notes.slice(0, limitCount));
+        setClinicalNotesTotal(notes.length);
+      } catch (error) {
+        if (!cancelled) console.error('Error loading clinical notes:', error);
+      } finally {
+        if (!cancelled) setLoadingClinicalNotes(false);
+      }
+    };
+    loadClinicalNotesRef.current = loadClinicalNotes;
+    loadClinicalNotes(clinicalNotesLimit);
+
     // Cleanup subscriptions on unmount or when client changes
     return () => {
       cancelled = true;
@@ -1395,6 +1437,41 @@ const InstitutionCaregiverDashboard = () => {
       ...prev,
       [recordId]: !prev[recordId]
     }));
+  };
+
+  // Save a clinical note as an attributed, timestamped client_activities row
+  const saveClinicalNote = async () => {
+    if (!selectedClient?.id) return;
+    const text = (clinicalNoteDraft.text || '').trim();
+    if (!text) {
+      toast.warning('Please enter the note content');
+      return;
+    }
+    setSavingClinicalNote(true);
+    try {
+      await clientActivitiesAPI.logActivity({
+        clientId: selectedClient.id,
+        institutionId: effectiveInstitutionId,
+        activityType: 'clinical_note',
+        description: text,
+        performedBy: user?.uid || userProfile?.id,
+        metadata: {
+          authorName: userProfile?.name || userProfile?.displayName || user?.displayName || 'Staff',
+          authorRole: isDoctor ? 'doctor' : isNurse ? 'nurse' : userProfile?.userType || 'staff',
+          noteType: clinicalNoteDraft.noteType || 'Progress Note',
+          clientName: selectedClient.name || selectedClient.fullName || null
+        }
+      });
+      toast.success('Clinical note saved');
+      setClinicalNoteDraft({ noteType: 'Progress Note', text: '' });
+      setShowClinicalNoteForm(false);
+      loadClinicalNotesRef.current?.(clinicalNotesLimit);
+    } catch (error) {
+      console.error('Error saving clinical note:', error);
+      toast.error('Failed to save clinical note');
+    } finally {
+      setSavingClinicalNote(false);
+    }
   };
 
   // Helper function to send notifications
@@ -5615,7 +5692,13 @@ const InstitutionCaregiverDashboard = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Age:</span>
-                        <span className="text-sm font-medium text-gray-900">{selectedClient.age || 'N/A'}</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {(() => {
+                            const computed = calculateAge(selectedClient.dateOfBirth);
+                            if (computed !== null) return `${computed} years`;
+                            return selectedClient.age || 'N/A';
+                          })()}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Gender:</span>
@@ -5623,7 +5706,9 @@ const InstitutionCaregiverDashboard = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Date of Birth:</span>
-                        <span className="text-sm font-medium text-gray-900">{selectedClient.dateOfBirth || 'N/A'}</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {formatDateOfBirth(selectedClient.dateOfBirth)}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Status:</span>
@@ -5715,11 +5800,19 @@ const InstitutionCaregiverDashboard = () => {
                             <Heart className="h-4 w-4 text-red-600 mr-2" />
                             Medical Conditions
                           </h4>
-                          <p className="text-sm text-gray-900">
-                            {Array.isArray(selectedClient.medicalConditions) 
-                              ? selectedClient.medicalConditions.join(', ') 
-                              : selectedClient.medicalConditions || selectedClient.conditions || 'None recorded'}
-                          </p>
+                          {(() => {
+                            const items = splitList(selectedClient.medicalConditions || selectedClient.conditions);
+                            return items.length > 0 ? (
+                              <ul className="space-y-1">
+                                {items.map((item, i) => (
+                                  <li key={i} className="text-sm text-gray-900 flex items-start">
+                                    <span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                                    <span>{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : <p className="text-sm text-gray-500">None recorded</p>;
+                          })()}
                         </div>
 
                         {/* Allergies */}
@@ -5728,11 +5821,19 @@ const InstitutionCaregiverDashboard = () => {
                             <AlertTriangle className="h-4 w-4 text-yellow-600 mr-2" />
                             Allergies
                           </h4>
-                          <p className="text-sm text-gray-900">
-                            {Array.isArray(selectedClient.allergies)
-                              ? selectedClient.allergies.join(', ')
-                              : selectedClient.allergies || selectedClient.allergyInfo || 'None recorded'}
-                          </p>
+                          {(() => {
+                            const items = splitList(selectedClient.allergies || selectedClient.allergyInfo);
+                            return items.length > 0 ? (
+                              <ul className="space-y-1">
+                                {items.map((item, i) => (
+                                  <li key={i} className="text-sm text-gray-900 flex items-start">
+                                    <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                                    <span>{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : <p className="text-sm text-gray-500">None recorded</p>;
+                          })()}
                         </div>
 
                         {/* Current Medications */}
@@ -5741,11 +5842,19 @@ const InstitutionCaregiverDashboard = () => {
                             <Pill className="h-4 w-4 text-green-600 mr-2" />
                             Current Medications
                           </h4>
-                          <p className="text-sm text-gray-900">
-                            {Array.isArray(selectedClient.medications)
-                              ? selectedClient.medications.join(', ')
-                              : selectedClient.medications || selectedClient.currentMedications || 'None recorded'}
-                          </p>
+                          {(() => {
+                            const items = splitList(selectedClient.medications || selectedClient.currentMedications);
+                            return items.length > 0 ? (
+                              <ul className="space-y-1">
+                                {items.map((item, i) => (
+                                  <li key={i} className="text-sm text-gray-900 flex items-start">
+                                    <Pill className="h-3.5 w-3.5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                                    <span>{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : <p className="text-sm text-gray-500">None recorded</p>;
+                          })()}
                         </div>
                       </div>
 
@@ -5773,7 +5882,7 @@ const InstitutionCaregiverDashboard = () => {
                                   Prescriptions ({clientPrescriptions.length})
                                 </h4>
                                 <div className="space-y-2">
-                                  {clientPrescriptions.map((prescription) => (
+                                  {clientPrescriptions.slice(0, recordsVisible.prescriptions || RECORDS_PAGE).map((prescription) => (
                                     <div key={prescription.id} className="border border-gray-200 rounded-lg hover:border-purple-300 transition-colors">
                                       <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(prescription.id)}>
                                         <div className="flex-1">
@@ -5818,6 +5927,14 @@ const InstitutionCaregiverDashboard = () => {
                                       )}
                                     </div>
                                   ))}
+                                  {clientPrescriptions.length > (recordsVisible.prescriptions || RECORDS_PAGE) && (
+                                    <button
+                                      onClick={() => setRecordsVisible(prev => ({ ...prev, prescriptions: (prev.prescriptions || RECORDS_PAGE) + RECORDS_PAGE }))}
+                                      className="w-full py-2 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                                    >
+                                      Show more ({clientPrescriptions.length - (recordsVisible.prescriptions || RECORDS_PAGE)} remaining)
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -5830,7 +5947,7 @@ const InstitutionCaregiverDashboard = () => {
                                   Consultations ({clientConsultations.length})
                                 </h4>
                                 <div className="space-y-2">
-                                  {clientConsultations.map((consultation) => (
+                                  {clientConsultations.slice(0, recordsVisible.consultations || RECORDS_PAGE).map((consultation) => (
                                     <div key={consultation.id} className="border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
                                       <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(consultation.id)}>
                                         <div className="flex-1">
@@ -5873,7 +5990,7 @@ const InstitutionCaregiverDashboard = () => {
                                             {consultation.notes && (
                                               <div>
                                                 <p className="font-medium text-gray-700">Notes:</p>
-                                                <p className="text-gray-600 ml-4">{consultation.notes}</p>
+                                                <ClinicalTextBlock text={consultation.notes} className="text-gray-600 ml-4" />
                                               </div>
                                             )}
                                             {consultation.followUpDate && (
@@ -5889,6 +6006,14 @@ const InstitutionCaregiverDashboard = () => {
                                       )}
                                     </div>
                                   ))}
+                                  {clientConsultations.length > (recordsVisible.consultations || RECORDS_PAGE) && (
+                                    <button
+                                      onClick={() => setRecordsVisible(prev => ({ ...prev, consultations: (prev.consultations || RECORDS_PAGE) + RECORDS_PAGE }))}
+                                      className="w-full py-2 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                                    >
+                                      Show more ({clientConsultations.length - (recordsVisible.consultations || RECORDS_PAGE)} remaining)
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -5901,7 +6026,7 @@ const InstitutionCaregiverDashboard = () => {
                                   Diagnostic Tests ({clientDiagnostics.length})
                                 </h4>
                                 <div className="space-y-2">
-                                  {clientDiagnostics.map((diagnostic) => (
+                                  {clientDiagnostics.slice(0, recordsVisible.diagnostics || RECORDS_PAGE).map((diagnostic) => (
                                     <div key={diagnostic.id} className="border border-gray-200 rounded-lg hover:border-green-300 transition-colors">
                                       <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(diagnostic.id)}>
                                         <div className="flex-1">
@@ -5945,7 +6070,7 @@ const InstitutionCaregiverDashboard = () => {
                                             {diagnostic.notes && (
                                               <div>
                                                 <p className="font-medium text-gray-700">Notes:</p>
-                                                <p className="text-gray-600 ml-4">{diagnostic.notes}</p>
+                                                <ClinicalTextBlock text={diagnostic.notes} className="text-gray-600 ml-4" />
                                               </div>
                                             )}
                                             {diagnostic.labName && (
@@ -5959,6 +6084,14 @@ const InstitutionCaregiverDashboard = () => {
                                       )}
                                     </div>
                                   ))}
+                                  {clientDiagnostics.length > (recordsVisible.diagnostics || RECORDS_PAGE) && (
+                                    <button
+                                      onClick={() => setRecordsVisible(prev => ({ ...prev, diagnostics: (prev.diagnostics || RECORDS_PAGE) + RECORDS_PAGE }))}
+                                      className="w-full py-2 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                                    >
+                                      Show more ({clientDiagnostics.length - (recordsVisible.diagnostics || RECORDS_PAGE)} remaining)
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -5971,7 +6104,7 @@ const InstitutionCaregiverDashboard = () => {
                                   Pharmacy Invoices ({clientInvoices.length})
                                 </h4>
                                 <div className="space-y-2">
-                                  {clientInvoices.map((invoice) => (
+                                  {clientInvoices.slice(0, recordsVisible.invoices || RECORDS_PAGE).map((invoice) => (
                                     <div key={invoice.id} className="border border-gray-200 rounded-lg hover:border-amber-300 transition-colors">
                                       <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(invoice.id)}>
                                         <div className="flex-1">
@@ -6049,7 +6182,7 @@ const InstitutionCaregiverDashboard = () => {
                                             {invoice.notes && (
                                               <div>
                                                 <p className="font-medium text-gray-700">Notes:</p>
-                                                <p className="text-gray-600 ml-4">{invoice.notes}</p>
+                                                <ClinicalTextBlock text={invoice.notes} className="text-gray-600 ml-4" />
                                               </div>
                                             )}
                                             
@@ -6065,6 +6198,14 @@ const InstitutionCaregiverDashboard = () => {
                                       )}
                                     </div>
                                   ))}
+                                  {clientInvoices.length > (recordsVisible.invoices || RECORDS_PAGE) && (
+                                    <button
+                                      onClick={() => setRecordsVisible(prev => ({ ...prev, invoices: (prev.invoices || RECORDS_PAGE) + RECORDS_PAGE }))}
+                                      className="w-full py-2 text-xs font-medium text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
+                                    >
+                                      Show more ({clientInvoices.length - (recordsVisible.invoices || RECORDS_PAGE)} remaining)
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -6218,18 +6359,114 @@ const InstitutionCaregiverDashboard = () => {
                         )}
                       </div>
 
-                      {/* Additional Medical Notes */}
-                      {selectedClient.notes && (
-                        <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 sm:p-6">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <FileText className="h-5 w-5 text-gray-600 mr-2" />
-                            Additional Medical Notes
+                      {/* Clinical Notes — timestamped, attributed feed */}
+                      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <FileText className="h-5 w-5 text-indigo-600 mr-2" />
+                            Clinical Notes ({clinicalNotesTotal})
                           </h3>
-                          <div className="bg-white rounded-lg p-4">
-                            <p className="text-sm text-gray-700">{selectedClient.notes}</p>
-                          </div>
+                          {(isDoctor || isNurse) && (
+                            <button
+                              onClick={() => setShowClinicalNoteForm(v => !v)}
+                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-sm"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Note
+                            </button>
+                          )}
                         </div>
-                      )}
+
+                        {/* Composer */}
+                        {showClinicalNoteForm && (isDoctor || isNurse) && (
+                          <div className="mb-4 bg-indigo-50 border border-indigo-100 rounded-lg p-4 space-y-3">
+                            <select
+                              value={clinicalNoteDraft.noteType}
+                              onChange={(e) => setClinicalNoteDraft(prev => ({ ...prev, noteType: e.target.value }))}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            >
+                              <option>Progress Note</option>
+                              <option>Clinical Note</option>
+                              <option>Care Instruction</option>
+                              <option>Incident Report</option>
+                              <option>Handover Note</option>
+                            </select>
+                            <textarea
+                              value={clinicalNoteDraft.text}
+                              onChange={(e) => setClinicalNoteDraft(prev => ({ ...prev, text: e.target.value }))}
+                              placeholder="Enter the clinical note. Use one line per point — lines starting with '- ' render as bullets and lines ending in ':' render as section headings."
+                              rows={6}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => { setShowClinicalNoteForm(false); setClinicalNoteDraft({ noteType: 'Progress Note', text: '' }); }}
+                                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={saveClinicalNote}
+                                disabled={savingClinicalNote}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm"
+                              >
+                                {savingClinicalNote ? 'Saving...' : 'Save Note'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Feed */}
+                        {loadingClinicalNotes && clinicalNotes.length === 0 ? (
+                          <div className="text-center py-6">
+                            <div className="animate-spin h-6 w-6 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto"></div>
+                          </div>
+                        ) : clinicalNotes.length === 0 ? (
+                          <p className="text-sm text-gray-400 text-center py-4">No clinical notes yet</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {clinicalNotes.map((note) => (
+                              <div key={note.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                                  <span className="px-2 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full">
+                                    {note.metadata?.noteType || 'Clinical Note'}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {formatDateTime(note.createdAt)}
+                                    {note.metadata?.authorName && ` · ${note.metadata.authorName}`}
+                                    {note.metadata?.authorRole && ` (${note.metadata.authorRole})`}
+                                  </span>
+                                </div>
+                                <ClinicalTextBlock text={note.description} />
+                              </div>
+                            ))}
+                            {clinicalNotesTotal > clinicalNotes.length && (
+                              <button
+                                onClick={() => {
+                                  const next = clinicalNotesLimit + 20;
+                                  setClinicalNotesLimit(next);
+                                  loadClinicalNotesRef.current?.(next);
+                                }}
+                                className="w-full py-2 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                              >
+                                Load older notes
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Legacy registration notes blob (read-only, never appended) */}
+                        {selectedClient.notes && (
+                          <div className="mt-4 border-t border-gray-200 pt-4">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                              Registration Notes
+                            </p>
+                            <div className="bg-white rounded-lg border border-gray-100 p-4">
+                              <ClinicalTextBlock text={selectedClient.notes} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </>
                   )}
 

@@ -104,6 +104,7 @@ import { signOut } from 'backend/auth';
 import { db } from '../backend/config';
 import TaskInstructionModal from '../components/TaskInstructionModal';
 import DashboardLayout from '../components/DashboardLayout';
+import { formatDateOfBirth } from '../utils/formatters';
 
 const PartnerCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -6057,7 +6058,7 @@ const PartnerCaregiverDashboard = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Date of Birth:</span>
-                        <span className="text-sm font-medium text-gray-900">{selectedClient.dateOfBirth || 'N/A'}</span>
+                        <span className="text-sm font-medium text-gray-900">{formatDateOfBirth(selectedClient.dateOfBirth)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Status:</span>

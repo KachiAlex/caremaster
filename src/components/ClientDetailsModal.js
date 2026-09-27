@@ -30,6 +30,8 @@ import ConsultationsLogModal from './ConsultationsLogModal';
 import PrescriptionsLogModal from './PrescriptionsLogModal';
 import LabTestsLogModal from './LabTestsLogModal';
 import CarePlanManager from './CarePlanManager';
+import { formatDateOfBirth, calculateAge as computeAge, splitList } from '../utils/formatters';
+import ClinicalTextBlock from './ClinicalTextBlock';
 
 const ClientDetailsModal = ({ 
   client, 
@@ -42,32 +44,9 @@ const ClientDetailsModal = ({
   const { userProfile, user } = useUser();
   const [activeTab, setActiveTab] = useState('overview');
 
-  const formatList = (val) => {
-    if (!val) return 'None Recorded';
-    if (Array.isArray(val)) return val.join(', ');
-    if (typeof val === 'string') return val;
-    return 'None Recorded';
-  };
+  const calculateAge = (dob) => computeAge(dob);
 
-  const calculateAge = (dob) => {
-    if (!dob) return null;
-    const birthDate = new Date(dob);
-    if (isNaN(birthDate.getTime())) return null;
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age >= 0 ? age : null;
-  };
-
-  const formatDate = (val) => {
-    if (!val) return 'N/A';
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return 'N/A';
-    return d.toLocaleDateString();
-  };
+  const formatDate = (val) => formatDateOfBirth(val);
 
   const displayValue = (val) => {
     if (val === null || val === undefined || val === '') return 'N/A';
@@ -195,7 +174,11 @@ const ClientDetailsModal = ({
                   <div>
                     <label className="text-xs font-medium text-gray-500 uppercase">Age</label>
                     <p className="text-sm font-medium text-gray-900 mt-1">
-                      {client.age || (client.dateOfBirth ? `${calculateAge(client.dateOfBirth)} years` : 'N/A')}
+                      {(() => {
+                        const computed = calculateAge(client.dateOfBirth);
+                        if (computed !== null) return `${computed} years`;
+                        return client.age || 'N/A';
+                      })()}
                     </p>
                   </div>
                   <div>
@@ -392,14 +375,14 @@ const ClientDetailsModal = ({
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Medical Conditions</h3>
                 <div className="flex flex-wrap gap-2">
-                  {client.medicalConditions && Array.isArray(client.medicalConditions) && client.medicalConditions.length > 0 ? (
-                    client.medicalConditions.map((condition, index) => (
+                  {splitList(client.medicalConditions).length > 0 ? (
+                    splitList(client.medicalConditions).map((condition, index) => (
                       <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
                         {condition}
                       </span>
                     ))
                   ) : (
-                    <p className="text-sm text-gray-600">{formatList(client.medicalConditions)}</p>
+                    <p className="text-sm text-gray-600">None Recorded</p>
                   )}
                 </div>
               </div>
@@ -407,14 +390,14 @@ const ClientDetailsModal = ({
               <div>
                 <h3 className="text-sm font-semibold text-red-700 mb-3">Allergies</h3>
                 <div className="flex flex-wrap gap-2">
-                  {client.allergies && Array.isArray(client.allergies) && client.allergies.length > 0 ? (
-                    client.allergies.map((allergy, index) => (
+                  {splitList(client.allergies).length > 0 ? (
+                    splitList(client.allergies).map((allergy, index) => (
                       <span key={index} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
                         {allergy}
                       </span>
                     ))
                   ) : (
-                    <p className="text-sm text-gray-600">{formatList(client.allergies)}</p>
+                    <p className="text-sm text-gray-600">None Recorded</p>
                   )}
                 </div>
               </div>
@@ -422,14 +405,14 @@ const ClientDetailsModal = ({
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Current Medications</h3>
                 <div className="space-y-2">
-                  {client.medications && Array.isArray(client.medications) && client.medications.length > 0 ? (
-                    client.medications.map((medication, index) => (
+                  {splitList(client.medications).length > 0 ? (
+                    splitList(client.medications).map((medication, index) => (
                       <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">
                         {medication}
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-gray-600">{formatList(client.medications)}</p>
+                    <p className="text-sm text-gray-600">None Recorded</p>
                   )}
                 </div>
               </div>
@@ -437,7 +420,7 @@ const ClientDetailsModal = ({
               {client.notes && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 mb-3">Clinical Notes</h3>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{client.notes}</p>
+                  <ClinicalTextBlock text={client.notes} className="text-sm text-gray-600" />
                 </div>
               )}
             </div>
