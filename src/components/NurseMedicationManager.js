@@ -7,6 +7,8 @@ import {
   History
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { collection, addDoc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 import { getMedicationsByClient } from '../api/medicationAPI';
 import {
   recordMedicationAdministration,
@@ -66,18 +68,25 @@ const normalizeRegistrationMed = (med, index) => {
   };
 };
 
-const normalizePrescription = (med) => ({
-  key: `rx-${med.id}`,
-  id: med.id,
-  name: med.name || med.medicationName || 'Medication',
-  dosage: med.dosage || med.dose,
-  frequency: med.frequency,
-  route: med.route,
-  instructions: med.instructions,
-  prescribedBy: med.doctorName || med.prescribedBy || med.doctor_name,
-  status: med.status,
-  source: 'prescription'
-});
+const normalizePrescription = (med) => {
+  let metadata = med.metadata;
+  if (typeof metadata === 'string') {
+    try { metadata = JSON.parse(metadata); } catch { metadata = null; }
+  }
+  return {
+    key: `rx-${med.id}`,
+    id: med.id,
+    name: med.name || med.medicationName || 'Medication',
+    dosage: med.dosage || med.dose,
+    frequency: med.frequency,
+    route: med.route,
+    instructions: med.instructions,
+    prescribedBy: med.doctorName || med.prescribedBy || med.doctor_name || metadata?.enteredByName,
+    status: med.status,
+    needsDoctorReview: !!metadata?.requiresDoctorReview,
+    source: 'prescription'
+  };
+};
 
 const getFrequencyHours = (frequency) => {
   if (!frequency) return 24;
@@ -114,6 +123,11 @@ const NurseMedicationManager = ({
   const [submitting, setSubmitting] = useState(false);
   const [administeringMed, setAdministeringMed] = useState(null);
   const [showAdministerModal, setShowAdministerModal] = useState(false);
+  const [showAddMedModal, setShowAddMedModal] = useState(false);
+  const [addingMed, setAddingMed] = useState(false);
+  const [addMedForm, setAddMedForm] = useState({
+    name: '', dosage: '', frequency: 'once daily', route: 'oral', instructions: ''
+  });
   const [administerForm, setAdministerForm] = useState({
     status: 'administered',
     administeredAt: '',
@@ -262,6 +276,48 @@ const NurseMedicationManager = ({
     }
   };
 
+  const handleAddMedication = async (e) => {
+    e.preventDefault();
+    if (addingMed) return;
+    if (!addMedForm.name.trim()) {
+      toast.error('Please enter the medication name');
+      return;
+    }
+    try {
+      setAddingMed(true);
+      await addDoc(collection(db, 'prescriptions'), {
+        patient_id: clientId,
+        institution_id: institutionId || null,
+        medication_name: addMedForm.name.trim(),
+        dosage: addMedForm.dosage.trim() || null,
+        frequency: addMedForm.frequency,
+        route: addMedForm.route,
+        instructions: addMedForm.instructions.trim() || null,
+        status: 'active',
+        start_date: new Date().toISOString(),
+        metadata: {
+          enteredByRole: 'nurse',
+          enteredById: nurseId || null,
+          enteredByName: nurseName || null,
+          enteredVia: 'medication-chart',
+          requiresDoctorReview: true
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      toast.success(`${addMedForm.name} added — flagged for doctor review`);
+      setShowAddMedModal(false);
+      setAddMedForm({ name: '', dosage: '', frequency: 'once daily', route: 'oral', instructions: '' });
+      await loadData();
+    } catch (error) {
+      console.error('Error adding medication:', error);
+      const detail = error?.response?.detail || error?.response?.message || error?.message;
+      toast.error(`Failed to add medication${detail ? `: ${detail}` : ''}`);
+    } finally {
+      setAddingMed(false);
+    }
+  };
+
   const needsReason = administerForm.status !== 'administered';
 
   return (
@@ -296,12 +352,21 @@ const NurseMedicationManager = ({
           ) : (
             <>
               <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2 gap-3">
                   <h3 className="text-lg font-semibold text-gray-900">
                     Current Medications ({medications.length})
                   </h3>
-                  <div className="text-xs text-gray-500">
-                    Prescriptions + registration meds — select one to chart
+                  <div className="flex items-center gap-3">
+                    <span className="hidden sm:inline text-xs text-gray-500">
+                      Prescriptions + registration meds
+                    </span>
+                    <button
+                      onClick={() => setShowAddMedModal(true)}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium flex items-center"
+                    >
+                      <Pill className="h-3.5 w-3.5 mr-1" />
+                      Add Medication
+                    </button>
                   </div>
                 </div>
 
@@ -309,7 +374,14 @@ const NurseMedicationManager = ({
                   <div className="text-center py-8 text-gray-500">
                     <Pill className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-lg font-medium">No medications on record</p>
-                    <p className="text-sm">No prescriptions or registration medications for this client.</p>
+                    <p className="text-sm mb-4">No prescriptions or registration medications for this client.</p>
+                    <button
+                      onClick={() => setShowAddMedModal(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium inline-flex items-center"
+                    >
+                      <Pill className="h-4 w-4 mr-2" />
+                      Add Medication to Chart
+                    </button>
                   </div>
                 ) : (
                   medications.map((medication) => {
@@ -327,6 +399,11 @@ const NurseMedicationManager = ({
                               <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                                 {medication.source === 'prescription' ? 'Prescription' : 'Registration'}
                               </span>
+                              {medication.needsDoctorReview && (
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                                  Nurse-entered · review
+                                </span>
+                              )}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
@@ -419,6 +496,122 @@ const NurseMedicationManager = ({
             </>
           )}
         </div>
+
+        {/* Add Medication Modal */}
+        {showAddMedModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-4 sm:p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Pill className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900">Add Medication</h3>
+                      <p className="text-xs text-gray-500">Added to this client's MAR — flagged for doctor review</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAddMedModal(false)}
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddMedication} className="p-4 sm:p-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Medication Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={addMedForm.name}
+                      onChange={(e) => setAddMedForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g., Paracetamol"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Dose</label>
+                      <input
+                        type="text"
+                        value={addMedForm.dosage}
+                        onChange={(e) => setAddMedForm(prev => ({ ...prev, dosage: e.target.value }))}
+                        placeholder="e.g., 500mg"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
+                      <select
+                        value={addMedForm.frequency}
+                        onChange={(e) => setAddMedForm(prev => ({ ...prev, frequency: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="once daily">Once daily</option>
+                        <option value="twice daily">Twice daily</option>
+                        <option value="three times daily">Three times daily</option>
+                        <option value="four times daily">Four times daily</option>
+                        <option value="every 4 hours">Every 4 hours</option>
+                        <option value="every 6 hours">Every 6 hours</option>
+                        <option value="every 8 hours">Every 8 hours</option>
+                        <option value="every 12 hours">Every 12 hours</option>
+                        <option value="as needed">As needed (PRN)</option>
+                        <option value="weekly">Weekly</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Route</label>
+                    <select
+                      value={addMedForm.route}
+                      onChange={(e) => setAddMedForm(prev => ({ ...prev, route: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {ROUTES.map(route => (
+                        <option key={route.value} value={route.value}>{route.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Instructions</label>
+                    <textarea
+                      value={addMedForm.instructions}
+                      onChange={(e) => setAddMedForm(prev => ({ ...prev, instructions: e.target.value }))}
+                      placeholder="e.g., Take with food, monitor blood pressure..."
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddMedModal(false)}
+                    className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingMed}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {addingMed ? 'Adding…' : 'Add Medication'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Medication Administration Modal */}
         {showAdministerModal && administeringMed && (
