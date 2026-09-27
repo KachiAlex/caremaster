@@ -1303,4 +1303,79 @@ router.post('/change-password', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * POST /unlock-user
+ * Admin-only: clear a user's failed-login lockout.
+ * Institution admins can only unlock users in their own institution;
+ * super-admins can unlock anyone.
+ * Body: { userId } or { email }
+ */
+router.post('/unlock-user', authenticateToken, async (req, res) => {
+  try {
+    const ADMIN_TYPES = ['admin', 'institution-admin', 'InstitutionAdmin'];
+    const SUPER_TYPES = ['super-admin', 'superadmin'];
+    const isAdmin = ADMIN_TYPES.includes(req.user.user_type);
+    const isSuper = SUPER_TYPES.includes(req.user.user_type);
+
+    if (!isAdmin && !isSuper) {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const { userId, email } = req.body || {};
+    if (!userId && !email) {
+      return res.status(400).json({ success: false, message: 'userId or email is required' });
+    }
+
+    let targetQuery = db('users');
+    if (userId) {
+      targetQuery = targetQuery.where({ id: userId });
+    } else {
+      targetQuery = targetQuery.whereRaw('LOWER(email) = LOWER(?)', [email]);
+    }
+    const target = await targetQuery.first();
+
+    if (!target) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Institution admins are scoped to their own institution
+    if (!isSuper && target.institution_id !== req.user.institution_id) {
+      return res.status(403).json({ success: false, message: 'Cannot unlock users outside your institution' });
+    }
+
+    await db('users').where({ id: target.id }).update({
+      failed_login_count: 0,
+      locked_until: null,
+    });
+
+    // Audit trail (best-effort — table may not exist in all deployments)
+    try {
+      await db('audit_logs').insert({
+        user_id: req.user.id,
+        action: 'unlock_user_account',
+        resource_type: 'user',
+        resource_id: target.id,
+        details: JSON.stringify({ unlocked_email: target.email }),
+        ip_address: req.ip,
+        user_agent: req.get('User-Agent'),
+        institution_id: req.user.institution_id || null,
+        timestamp: new Date(),
+      });
+    } catch (auditErr) {
+      logger.warn('Audit log insert failed for unlock-user:', auditErr.message);
+    }
+
+    logger.info(`Account ${target.email} unlocked by ${req.user.email} (${req.user.user_type})`);
+
+    res.json({
+      success: true,
+      message: `${target.email} has been unlocked`,
+      data: { userId: target.id, email: target.email },
+    });
+  } catch (error) {
+    logger.error('Unlock user error:', error);
+    res.status(500).json({ success: false, message: 'Failed to unlock account' });
+  }
+});
+
 module.exports = router;

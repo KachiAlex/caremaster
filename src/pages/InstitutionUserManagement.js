@@ -17,12 +17,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  Unlock
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import InstitutionUserCreationModal from '../components/InstitutionUserCreationModal';
 import { collection, query, getDocs, where } from 'backend/database';
 import { db } from '../backend/config';
+import { unlockUserAccount } from '../backend/auth';
 
 const InstitutionUserManagement = () => {
   const { userProfile, institutionId } = useUser();
@@ -79,6 +81,30 @@ const InstitutionUserManagement = () => {
     const matchesRole = filterRole === 'all' || user.role === filterRole;
     return matchesSearch && matchesRole;
   });
+
+  const isUserLocked = (user) => {
+    if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) return true;
+    return (user.failedLoginCount || 0) >= 5;
+  };
+
+  const [unlockingId, setUnlockingId] = useState(null);
+
+  const handleUnlock = async (user) => {
+    if (unlockingId) return;
+    try {
+      setUnlockingId(user.id);
+      await unlockUserAccount({ userId: user.id });
+      toast.success(`${user.email} has been unlocked`);
+      setUsers(prev => prev.map(u =>
+        u.id === user.id ? { ...u, lockedUntil: null, failedLoginCount: 0 } : u
+      ));
+    } catch (error) {
+      console.error('Unlock failed:', error);
+      toast.error(error?.response?.message || error?.message || 'Failed to unlock account');
+    } finally {
+      setUnlockingId(null);
+    }
+  };
 
   const handleUserCreated = (result) => {
     console.log('✅ New user created:', result);
@@ -328,6 +354,11 @@ const InstitutionUserManagement = () => {
                       {getStatusIcon(user.status)}
                       <span className="ml-1 capitalize">{user.status}</span>
                     </span>
+                    {isUserLocked(user) && (
+                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-300">
+                        🔒 Locked
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center">
@@ -347,6 +378,16 @@ const InstitutionUserManagement = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center space-x-2">
+                      {(isUserLocked(user) || (user.failedLoginCount || 0) > 0) && (
+                        <button
+                          onClick={() => handleUnlock(user)}
+                          disabled={unlockingId === user.id}
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                          title={isUserLocked(user) ? 'Unlock account (failed-login lockout)' : 'Reset failed login attempts'}
+                        >
+                          <Unlock className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleUserAction('edit', user.id)}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
