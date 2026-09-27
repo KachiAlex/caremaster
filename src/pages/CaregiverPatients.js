@@ -32,6 +32,7 @@ import { getNurseReportsByPatient } from '../api/nurseReportsAPI';
 import { toast } from 'react-toastify';
 import { medicationAPI } from '../api/medicationAPI';
 import NurseReportCard from '../components/NurseReportCard';
+import { formatDate, calculateAge, splitList } from '../utils/formatters';
 
 const CaregiverClients = () => {
   const { userProfile, userRole } = useUser();
@@ -110,28 +111,13 @@ const CaregiverClients = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const formatDateSafe = (v) => {
-    if (!v) return '—';
-    const d = v?.toDate ? v.toDate() : new Date(v);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
-  };
+  const formatDateSafe = (v) => formatDate(v, '—');
 
   // Compute age from dateOfBirth (client creation stores dateOfBirth, not age)
-  const computeAge = (dateOfBirth) => {
-    if (!dateOfBirth) return null;
-    const d = dateOfBirth?.toDate ? dateOfBirth.toDate() : new Date(dateOfBirth);
-    if (isNaN(d.getTime())) return null;
-    const diff = Date.now() - d.getTime();
-    return Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000));
-  };
+  const computeAge = (dateOfBirth) => calculateAge(dateOfBirth);
 
   // Format an array of conditions/medications/allergies for display
-  const formatList = (val) => {
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
-    return [];
-  };
+  const formatList = (val) => splitList(val);
 
   const getStatusColor = (status) => {
     switch (status) {
