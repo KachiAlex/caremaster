@@ -120,15 +120,100 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     idCard: null,
     referralLetter: null,
     medicalRecord: null,
-    insuranceCard: null
+    insuranceCard: null,
+    clinicalNotes: null
   });
   const [uploading, setUploading] = useState({});
   const [fileError, setFileError] = useState('');
   const [nationalId, setNationalId] = useState('');
 
+  // Combine a selected country code with the local number the user typed.
+  // Local numbers commonly start with a leading 0 (e.g. Nigeria 0801…),
+  // which must be dropped before the country code is prepended, otherwise
+  // E.164-style validation rejects perfectly valid numbers.
+  const combinePhone = (countryCode, localNumber) => {
+    const digits = (localNumber || '').replace(/[^\d]/g, '').replace(/^0+/, '');
+    const code = (countryCode || '').replace(/[^\d]/g, '');
+    return digits ? `+${code}${digits}` : '';
+  };
+
   // Compute the institution ID at the component level so it's available
   // for both the billing plans fetch and the submit handler
   const effectiveInstitutionId = institutionId || userProfile?.institutionId;
+
+  // ── Registration draft persistence ─────────────────────────────────────
+  // The form data is saved to localStorage as the user types so that closing
+  // the modal (X, Cancel, browser back, accidental refresh) never loses a
+  // partially-completed registration. Passwords are deliberately excluded
+  // from the draft for security.
+  const draftKey = `client-registration-draft:${effectiveInstitutionId || 'default'}`;
+  const draftLoadedRef = React.useRef(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // Restore the draft once each time the modal opens
+  React.useEffect(() => {
+    if (!open) {
+      draftLoadedRef.current = false;
+      return;
+    }
+    if (draftLoadedRef.current) return;
+    draftLoadedRef.current = true;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft?.formData && Object.values(draft.formData).some(
+        v => (typeof v === 'string' && v.trim()) || (Array.isArray(v) && v.length > 0)
+      )) {
+        setFormData(prev => ({ ...prev, ...draft.formData, loginPassword: '', confirmPassword: '' }));
+        setCurrentStep(draft.currentStep >= 1 && draft.currentStep <= 4 ? draft.currentStep : 1);
+        if (draft.nationalId) setNationalId(draft.nationalId);
+        setDraftRestored(true);
+        toast.info('Restored your saved registration draft', { autoClose: 4000 });
+      }
+    } catch { /* corrupted draft — ignore */ }
+  }, [open, draftKey]);
+
+  // Debounced draft save on every change
+  React.useEffect(() => {
+    if (!open || createdPatientId) return;
+    const t = setTimeout(() => {
+      try {
+        const { loginPassword, confirmPassword, ...safeFormData } = formData;
+        localStorage.setItem(draftKey, JSON.stringify({
+          formData: safeFormData,
+          currentStep,
+          nationalId,
+          savedAt: Date.now()
+        }));
+      } catch { /* storage full/blocked — ignore */ }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [formData, currentStep, nationalId, open, createdPatientId, draftKey]);
+
+  const clearDraft = () => {
+    try { localStorage.removeItem(draftKey); } catch {}
+    setDraftRestored(false);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setFormData({
+      name: '', fullName: '', email: '', phoneCountryCode: '+234', phone: '',
+      dateOfBirth: '', gender: '', address: '', city: '', state: '', zipCode: '',
+      emergencyContactName: '', emergencyContactPhoneCountryCode: '+234',
+      emergencyContactPhone: '', emergencyContactRelationship: '',
+      medicalConditions: [], medications: [], allergies: [],
+      bloodType: '', genotype: '', careLevel: 'basic',
+      insuranceProvider: '', insurancePolicyNumber: '',
+      primaryCarePhysician: '', physicianPhone: '', notes: '', nationalId: '',
+      loginPassword: '', confirmPassword: '',
+      subscriptionPlanId: '', billingCycle: 'monthly'
+    });
+    setNationalId('');
+    setCurrentStep(1);
+    toast.info('Draft discarded');
+  };
 
   // Fetch billing plans for the institution when modal opens
   React.useEffect(() => {
@@ -277,6 +362,17 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
           toast.error('Phone number is required');
           return false;
         }
+        // Validate the COMBINED number (country code + local digits without
+        // leading 0). Checking the local part alone rejects valid local
+        // formats like 08012345678.
+        if (!validatePhone(combinePhone(formData.phoneCountryCode, formData.phone)).valid) {
+          toast.error('Invalid phone number. Enter digits only, without the country code or a leading 0 — e.g. 8012345678');
+          return false;
+        }
+        if (formData.email.trim() && !validateEmail(formData.email).valid) {
+          toast.error('Invalid email format');
+          return false;
+        }
         return true;
       case 2:
         if (!formData.emergencyContactName.trim()) {
@@ -285,6 +381,10 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         }
         if (!formData.emergencyContactPhone.trim()) {
           toast.error('Emergency contact phone is required');
+          return false;
+        }
+        if (!validatePhone(combinePhone(formData.emergencyContactPhoneCountryCode, formData.emergencyContactPhone)).valid) {
+          toast.error('Invalid emergency contact phone. Enter digits only, without the country code or a leading 0 — e.g. 8012345678');
           return false;
         }
         return true;
@@ -439,21 +539,61 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
       }
 
       // SECURITY FIX: Comprehensive validation and sanitization before submission
+      // Phone fields are validated separately below because the local part
+      // must be combined with its country code (and leading 0 stripped)
+      // before format validation.
       const validationSchema = {
         name: { required: true, type: 'text', label: 'Name' },
         email: { required: false, type: 'email', label: 'Email' },
-        phone: { required: true, type: 'phone', label: 'Phone' },
         dateOfBirth: { required: true, type: 'date', label: 'Date of Birth' },
-        emergencyContactName: { required: true, type: 'text', label: 'Emergency Contact Name' },
-        emergencyContactPhone: { required: true, type: 'phone', label: 'Emergency Contact Phone' },
-        physicianPhone: { required: false, type: 'phone', label: 'Physician Phone' }
+        emergencyContactName: { required: true, type: 'text', label: 'Emergency Contact Name' }
       };
-      
+
       const validation = validateFormInputs(formData, validationSchema);
 
+      // Which step each field lives on, so validation failures take the
+      // user straight back to the offending field instead of leaving them
+      // stranded on the final step.
+      const fieldStepMap = {
+        name: 1, email: 1, phone: 1, dateOfBirth: 1,
+        emergencyContactName: 2, emergencyContactPhone: 2,
+        physicianPhone: 3
+      };
+
       if (!validation.valid) {
-        const firstError = Object.values(validation.errors)[0];
+        const firstField = Object.keys(validation.errors)[0];
+        const firstError = validation.errors[firstField];
+        if (fieldStepMap[firstField]) {
+          setCurrentStep(fieldStepMap[firstField]);
+        }
         toast.error(firstError);
+        setLoading(false);
+        return;
+      }
+
+      // Validate phone numbers with country code combined (local part must
+      // not carry a leading 0 — it is stripped before combining)
+      const fullPhone = combinePhone(formData.phoneCountryCode, formData.phone);
+      const phoneCheck = validatePhone(fullPhone);
+      if (!phoneCheck.valid) {
+        setCurrentStep(1);
+        toast.error('Invalid client phone number. Enter digits only, without the country code or a leading 0 — e.g. 8012345678');
+        setLoading(false);
+        return;
+      }
+
+      const fullEmergencyPhone = combinePhone(formData.emergencyContactPhoneCountryCode, formData.emergencyContactPhone);
+      const emergencyPhoneCheck = validatePhone(fullEmergencyPhone);
+      if (!emergencyPhoneCheck.valid) {
+        setCurrentStep(2);
+        toast.error('Invalid emergency contact phone. Enter digits only, without the country code or a leading 0 — e.g. 8012345678');
+        setLoading(false);
+        return;
+      }
+
+      if (formData.physicianPhone.trim() && !validatePhone(formData.physicianPhone).valid) {
+        setCurrentStep(3);
+        toast.error('Invalid physician phone number format');
         setLoading(false);
         return;
       }
@@ -477,7 +617,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         name: sanitizeText(formData.name.trim()),
         fullName: sanitizeText(formData.fullName.trim() || formData.name.trim()),
         email: formData.email ? sanitizeText(formData.email.trim().toLowerCase()) : null,
-        phone: sanitizeText(`${formData.phoneCountryCode}${formData.phone.trim()}`),
+        phone: sanitizeText(fullPhone),
         dateOfBirth: formData.dateOfBirth || null,
         gender: formData.gender || null,
         address: formData.address ? sanitizeText(formData.address.trim()) : null,
@@ -485,7 +625,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         state: formData.state ? sanitizeText(formData.state.trim()) : null,
         zipCode: formData.zipCode ? sanitizeText(formData.zipCode.trim()) : null,
         emergencyContactName: sanitizeText(formData.emergencyContactName.trim()),
-        emergencyContactPhone: sanitizeText(`${formData.emergencyContactPhoneCountryCode}${formData.emergencyContactPhone.trim()}`),
+        emergencyContactPhone: sanitizeText(fullEmergencyPhone),
         emergencyContactRelationship: formData.emergencyContactRelationship ? sanitizeText(formData.emergencyContactRelationship.trim()) : null,
         medicalConditions: formData.medicalConditions.map(condition => sanitizeText(condition)),
         medications: formData.medications.map(med => sanitizeText(med)),
@@ -681,10 +821,12 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         idCard: null,
         referralLetter: null,
         medicalRecord: null,
-        insuranceCard: null
+        insuranceCard: null,
+        clinicalNotes: null
       });
       setDuplicateCheck(null);
       setCurrentStep(1);
+      clearDraft();
       
       if (onSuccess) {
         onSuccess(result);
@@ -939,10 +1081,13 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                             onChange={handleInputChange}
                             required
                             className={`${inputClass} pl-10`}
-                            placeholder="1234567890"
+                            placeholder="8012345678"
                           />
                         </div>
                       </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Local number only — no country code or leading 0. Example: 8012345678
+                      </p>
                     </div>
 
                     <div>
@@ -1132,10 +1277,13 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                             onChange={handleInputChange}
                             required
                             className={`${inputClass} pl-10`}
-                            placeholder="1234567890"
+                            placeholder="8012345678"
                           />
                         </div>
                       </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Local number only — no country code or leading 0. Example: 8012345678
+                      </p>
                     </div>
 
                     <div className="md:col-span-2">
@@ -1427,6 +1575,49 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                       className={inputClass}
                       placeholder="Special clinical instructions, baseline vitals, dietary restrictions, mobility status, or behavioral notes..."
                     />
+                    {/* File upload for lengthy clinical notes / physician reports */}
+                    <div className="mt-2">
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) handleFileUpload(file, 'clinicalNotes');
+                        }}
+                        className="hidden"
+                        id="file-clinicalNotes"
+                        disabled={uploading.clinicalNotes}
+                      />
+                      <label
+                        htmlFor="file-clinicalNotes"
+                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
+                          uploadedDocuments.clinicalNotes
+                            ? 'border-green-500 bg-green-50 text-green-700'
+                            : 'border-dashed border-gray-300 bg-white text-gray-600 hover:border-blue-500 hover:text-blue-600'
+                        } ${uploading.clinicalNotes ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <Upload className="h-4 w-4" />
+                        <span>
+                          {uploadedDocuments.clinicalNotes
+                            ? uploadedDocuments.clinicalNotes.file?.name || 'File selected'
+                            : uploading.clinicalNotes
+                              ? 'Uploading...'
+                              : 'Upload a document instead (PDF, Word, image — max 10MB)'}
+                        </span>
+                        {uploadedDocuments.clinicalNotes && (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        )}
+                      </label>
+                      {uploadedDocuments.clinicalNotes && (
+                        <button
+                          type="button"
+                          onClick={() => setUploadedDocuments(prev => ({ ...prev, clinicalNotes: null }))}
+                          className="ml-3 text-xs text-red-600 hover:text-red-800"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1573,13 +1764,25 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         {/* Footer Actions */}
         {!createdPatientId && (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-gray-200 px-4 sm:px-6 py-4 bg-gray-50 gap-3">
-            <button
-              type="button"
-              onClick={currentStep === 1 ? onClose : handlePrevious}
-              className="px-4 py-3 sm:py-2 min-h-[44px] rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              {currentStep === 1 ? 'Cancel' : 'Previous'}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={currentStep === 1 ? onClose : handlePrevious}
+                className="px-4 py-3 sm:py-2 min-h-[44px] rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                {currentStep === 1 ? 'Cancel' : 'Previous'}
+              </button>
+              {draftRestored && (
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="text-xs text-red-600 hover:text-red-800 underline"
+                >
+                  Discard draft & start over
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 hidden sm:block">Your progress is auto-saved as a draft</p>
             <div className="flex gap-3">
               {currentStep < 4 ? (
                 <button

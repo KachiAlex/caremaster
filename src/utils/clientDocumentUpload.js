@@ -117,6 +117,11 @@ export const getDocumentTypeLabel = (documentType) => {
     insurance_card: 'Insurance Card',
     clinical_note: 'Clinical Note',
     care_instruction: 'Care Instruction',
+    clinicalNotes: 'Clinical Notes & Care Instructions',
+    idCard: 'ID Card',
+    referralLetter: 'Referral Letter',
+    medicalRecord: 'Medical Record',
+    insuranceCard: 'Insurance Card',
     other: 'Document'
   };
   return labels[documentType] || documentType.replace(/_/g, ' ');
