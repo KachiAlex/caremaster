@@ -143,6 +143,7 @@ const InstitutionCaregiverDashboard = () => {
   const [showCareLogsModal, setShowCareLogsModal] = useState(false);
   const [showNurseReportModal, setShowNurseReportModal] = useState(false);
   const [showMedicationModal, setShowMedicationModal] = useState(false);
+  const [chartingMedication, setChartingMedication] = useState(null);
   const [showCareLogForm, setShowCareLogForm] = useState(false);
   const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
   const [reportType, setReportType] = useState('shift');
@@ -4216,7 +4217,7 @@ const InstitutionCaregiverDashboard = () => {
                               </span>
                               {(isNurse || isDoctor) && (
                                 <button
-                                  onClick={() => setShowMedicationModal(true)}
+                                  onClick={() => { setChartingMedication(typeof med === 'object' ? med : { name: med }); setShowMedicationModal(true); }}
                                   className="px-3 py-1 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors"
                                 >
                                   Chart
@@ -5183,15 +5184,17 @@ const InstitutionCaregiverDashboard = () => {
         <NurseMedicationManager
           clientId={selectedClient.id}
           clientName={selectedClient.name || selectedClient.fullName || 'Unknown Client'}
-          nurseId={user?.uid}
+          nurseId={user?.id || user?.uid}
           nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
           institutionId={userProfile?.institutionId || selectedClient?.institutionId}
           registrationMedications={selectedClient.medications || []}
+          initialChartMed={chartingMedication}
           onSave={() => {
             setShowMedicationModal(false);
+            setChartingMedication(null);
             // Refresh client data if needed
           }}
-          onCancel={() => setShowMedicationModal(false)}
+          onCancel={() => { setShowMedicationModal(false); setChartingMedication(null); }}
         />
       )}
 
