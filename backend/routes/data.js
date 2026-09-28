@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { authenticateToken } = require('../middleware/auth');
-const { scopeQuery, canAccessTable, canModifyRecord, ADMIN_ONLY_TABLES, PATIENT_ROLES, OWNER_COLUMN } = require('../middleware/authorization');
+const { scopeQuery, canAccessTable, canModifyRecord, ADMIN_ONLY_TABLES, PATIENT_ROLES, SUPER_ADMIN_ROLES, OWNER_COLUMN } = require('../middleware/authorization');
 const { logger } = require('../utils/logger');
 const db = require('../utils/database');
 const sseManager = require('../sse');
@@ -54,6 +54,7 @@ const ALLOWED_TABLES = [
   'doseLogs', 'sideEffects', 'failedLoginAttempts', 'blockedIps',
   'prescriptionRefills', 'messageTemplates', 'pharmacistMedicationData',
   'nurseReports', 'medicalReports',
+  'registrationDrafts',
 ];
 
 // Map frontend collection names to actual PostgreSQL table names
@@ -88,6 +89,7 @@ const COLLECTION_TO_TABLE = {
   nurseReports: 'nurse_reports',
   medicalReports: 'patient_reports',
   adlLogs: 'adl_logs',
+  registrationDrafts: 'registration_drafts',
 };
 
 // Column aliases: maps frontend filter keys to actual DB column names per table.
@@ -252,7 +254,8 @@ const WRITABLE_FIELDS = {
   login_attempts: ['email', 'user_id', 'userId', 'institution_id', 'institutionId', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'success', 'timestamp', 'created_at', 'updated_at'],
   two_factor_auth: ['user_id', 'userId', 'email', 'enabled', 'code', 'verified', 'expires_at', 'expiresAt', 'enabled_at', 'enabledAt', 'disabled_at', 'disabledAt', 'verified_at', 'verifiedAt', 'created_at', 'updated_at'],
   client_activities: ['patient_id', 'performed_by', 'institution_id', 'activity_type', 'description', 'metadata', 'created_at', 'updated_at'],
-  adl_logs: ['client_id', 'caregiver_id', 'activity_id', 'activity_name', 'notes', 'status', 'timestamp', 'metadata', 'created_at', 'updated_at']
+  adl_logs: ['client_id', 'caregiver_id', 'activity_id', 'activity_name', 'notes', 'status', 'timestamp', 'metadata', 'created_at', 'updated_at'],
+  registration_drafts: ['institution_id', 'created_by', 'created_by_name', 'client_name', 'form_data', 'current_step', 'national_id', 'status', 'last_saved_at', 'created_at', 'updated_at']
 };
 
 // Allowed sort columns per table (to prevent SQL injection via orderBy)
@@ -300,6 +303,7 @@ const SORTABLE_COLUMNS = {
   nurse_reports: ['id', 'created_at', 'updated_at', 'news_score', 'feedback_status', 'priority_code'],
   client_activities: ['id', 'created_at', 'updated_at'],
   adl_logs: ['id', 'timestamp', 'created_at'],
+  registration_drafts: ['id', 'last_saved_at', 'created_at', 'updated_at', 'status'],
   referrals: ['id', 'sent_at', 'status', 'priority', 'created_at']
 };
 
@@ -892,6 +896,15 @@ router.post('/:table', async (req, res) => {
       if (ownerCol && ownerCol !== 'id') {
         data[ownerCol] = req.user.id; // Force ownership
       }
+    }
+
+    // Registration drafts belong to the creating admin's institution — never
+    // trust client-supplied institution_id/created_by on this table.
+    if (tableName === 'registration_drafts' && req.user) {
+      if (!SUPER_ADMIN_ROLES.includes(req.user.user_type)) {
+        data.institution_id = req.user.institution_id;
+      }
+      data.created_by = req.user.id;
     }
 
     // Clients can only REQUEST a telemedicine appointment. They cannot pick

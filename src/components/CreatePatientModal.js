@@ -25,6 +25,7 @@ import {
   Crown
 } from 'lucide-react';
 import { createClient, createClientLoginAccount, updatePatient } from '../api/patientsAPI';
+import { createRegistrationDraft, updateRegistrationDraft, deleteRegistrationDraft } from '../api/registrationDraftsAPI';
 import { getBillingPlans, assignSubscriptionToClient, BILLING_FREQUENCIES } from '../api/billingPlansAPI';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
@@ -53,7 +54,7 @@ const countryCodes = [
   { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
 ];
 
-const CreateClientModal = ({ open, onClose, onSuccess }) => {
+const CreateClientModal = ({ open, onClose, onSuccess, resumeDraft, onDraftChange }) => {
   const { userProfile, institutionId } = useUser();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -149,30 +150,56 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
   const draftKey = `client-registration-draft:${effectiveInstitutionId || 'default'}`;
   const draftLoadedRef = React.useRef(false);
   const [draftRestored, setDraftRestored] = useState(false);
+  // Server-side draft state — a draft row in registration_drafts gives
+  // cross-device resume + a visible "drafts in progress" list. localStorage
+  // stays as the offline fallback.
+  const [serverDraftId, setServerDraftId] = useState(null);
+  const [draftSaveState, setDraftSaveState] = useState('idle'); // idle|saving|saved|error|offline
+  const serverDraftIdRef = React.useRef(null);
+  serverDraftIdRef.current = serverDraftId;
 
-  // Restore the draft once each time the modal opens
+  const formHasContent = (data) => Object.values(data || {}).some(
+    v => (typeof v === 'string' && v.trim()) || (Array.isArray(v) && v.length > 0)
+  );
+
+  // Restore a draft once each time the modal opens. A server draft passed via
+  // resumeDraft takes priority over the local copy (it came from the drafts
+  // list / another device); otherwise fall back to localStorage.
   React.useEffect(() => {
     if (!open) {
       draftLoadedRef.current = false;
+      setServerDraftId(null); // next open starts clean unless resumeDraft provides one
+      setDraftSaveState('idle');
       return;
     }
     if (draftLoadedRef.current) return;
     draftLoadedRef.current = true;
+
+    if (resumeDraft?.formData && formHasContent(resumeDraft.formData)) {
+      setFormData(prev => ({ ...prev, ...resumeDraft.formData, loginPassword: '', confirmPassword: '' }));
+      setCurrentStep(resumeDraft.currentStep >= 1 && resumeDraft.currentStep <= 4 ? resumeDraft.currentStep : 1);
+      if (resumeDraft.nationalId) setNationalId(resumeDraft.nationalId);
+      setServerDraftId(resumeDraft.id || null);
+      setDraftRestored(true);
+      return;
+    }
+
     try {
       const raw = localStorage.getItem(draftKey);
       if (!raw) return;
       const draft = JSON.parse(raw);
-      if (draft?.formData && Object.values(draft.formData).some(
-        v => (typeof v === 'string' && v.trim()) || (Array.isArray(v) && v.length > 0)
-      )) {
+      if (draft?.formData && formHasContent(draft.formData)) {
         setFormData(prev => ({ ...prev, ...draft.formData, loginPassword: '', confirmPassword: '' }));
         setCurrentStep(draft.currentStep >= 1 && draft.currentStep <= 4 ? draft.currentStep : 1);
         if (draft.nationalId) setNationalId(draft.nationalId);
+        // Re-attach to the server draft row so autosave updates it instead
+        // of creating a duplicate.
+        if (draft.serverDraftId) setServerDraftId(draft.serverDraftId);
         setDraftRestored(true);
         toast.info('Restored your saved registration draft', { autoClose: 4000 });
       }
     } catch { /* corrupted draft — ignore */ }
-  }, [open, draftKey]);
+  }, [open, draftKey, resumeDraft]);
 
   // Debounced draft save on every change
   React.useEffect(() => {
@@ -184,6 +211,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
           formData: safeFormData,
           currentStep,
           nationalId,
+          serverDraftId: serverDraftIdRef.current,
           savedAt: Date.now()
         }));
       } catch { /* storage full/blocked — ignore */ }
@@ -191,9 +219,81 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     return () => clearTimeout(t);
   }, [formData, currentStep, nationalId, open, createdPatientId, draftKey]);
 
+  // Debounced server-side draft save — runs a beat after the local save so a
+  // draft row exists for cross-device resume and the admin drafts list.
+  // Only saves once the form has real content so empty opens don't create
+  // junk rows.
+  React.useEffect(() => {
+    if (!open || createdPatientId) return;
+    if (!formHasContent(formData)) return;
+    const t = setTimeout(async () => {
+      setDraftSaveState('saving');
+      const { loginPassword, confirmPassword, ...safeFormData } = formData;
+      const clientName = safeFormData.fullName || safeFormData.name || null;
+      const payload = { clientName, formData: safeFormData, currentStep, nationalId };
+      try {
+        if (serverDraftIdRef.current) {
+          const ok = await updateRegistrationDraft(serverDraftIdRef.current, payload);
+          setDraftSaveState(ok ? 'saved' : 'error');
+        } else {
+          const created = await createRegistrationDraft({
+            institutionId: effectiveInstitutionId,
+            createdByName: userProfile?.name || userProfile?.displayName || userProfile?.email || null,
+            ...payload,
+          });
+          if (created?.id) {
+            setServerDraftId(created.id);
+            setDraftSaveState('saved');
+            if (onDraftChange) onDraftChange();
+          } else {
+            setDraftSaveState(navigator.onLine === false ? 'offline' : 'error');
+          }
+        }
+      } catch {
+        setDraftSaveState(navigator.onLine === false ? 'offline' : 'error');
+      }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [formData, currentStep, nationalId, open, createdPatientId, effectiveInstitutionId]);
+
+  const saveDraftNow = async () => {
+    if (!formHasContent(formData)) return true; // nothing to save — safe to close
+    const { loginPassword, confirmPassword, ...safeFormData } = formData;
+    const clientName = safeFormData.fullName || safeFormData.name || null;
+    const payload = { clientName, formData: safeFormData, currentStep, nationalId };
+    if (serverDraftIdRef.current) {
+      return updateRegistrationDraft(serverDraftIdRef.current, payload);
+    }
+    const created = await createRegistrationDraft({
+      institutionId: effectiveInstitutionId,
+      createdByName: userProfile?.name || userProfile?.displayName || userProfile?.email || null,
+      ...payload,
+    });
+    if (created?.id) setServerDraftId(created.id);
+    return !!created?.id;
+  };
+
+  const handleSaveAndExit = async () => {
+    setDraftSaveState('saving');
+    const ok = await saveDraftNow();
+    setDraftSaveState(ok ? 'saved' : (navigator.onLine === false ? 'offline' : 'error'));
+    if (onDraftChange) onDraftChange();
+    toast[ok ? 'success' : 'info'](
+      ok ? 'Draft saved — you can resume it from the Clients tab' : 'Progress saved on this device only (offline)',
+      { autoClose: 4000 }
+    );
+    onClose();
+  };
+
   const clearDraft = () => {
     try { localStorage.removeItem(draftKey); } catch {}
+    if (serverDraftIdRef.current) {
+      deleteRegistrationDraft(serverDraftIdRef.current).catch(() => {});
+      setServerDraftId(null);
+      if (onDraftChange) onDraftChange();
+    }
     setDraftRestored(false);
+    setDraftSaveState('idle');
   };
 
   const handleDiscardDraft = () => {
@@ -1782,8 +1882,38 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                 </button>
               )}
             </div>
-            <p className="text-xs text-gray-400 hidden sm:block">Your progress is auto-saved as a draft</p>
+            <div className="hidden sm:flex items-center gap-2 text-xs">
+              {draftSaveState === 'saving' && (
+                <span className="flex items-center gap-1 text-gray-500">
+                  <Loader className="h-3 w-3 animate-spin" /> Saving draft…
+                </span>
+              )}
+              {draftSaveState === 'saved' && (
+                <span className="flex items-center gap-1 text-green-600">
+                  <CheckCircle className="h-3 w-3" /> Draft saved — resume anytime
+                </span>
+              )}
+              {draftSaveState === 'offline' && (
+                <span className="text-amber-600">Offline — saved on this device only</span>
+              )}
+              {draftSaveState === 'error' && (
+                <span className="text-amber-600">Couldn't sync draft — saved on this device</span>
+              )}
+              {draftSaveState === 'idle' && (
+                <span className="text-gray-400">Your progress is auto-saved as a draft</span>
+              )}
+            </div>
             <div className="flex gap-3">
+              {currentStep < 4 && formHasContent(formData) && (
+                <button
+                  type="button"
+                  onClick={handleSaveAndExit}
+                  className="px-4 py-3 sm:py-2 min-h-[44px] rounded-lg border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  Save & Exit
+                </button>
+              )}
               {currentStep < 4 ? (
                 <button
                   type="button"
