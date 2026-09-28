@@ -103,6 +103,7 @@ import ReferralTracker from '../components/ReferralTracker';
 import InstitutionSettings from '../components/InstitutionSettings';
 import ChangePasswordForm from '../components/ChangePasswordForm';
 import CreatePatientModal from '../components/CreatePatientModal';
+import { getRegistrationDrafts, deleteRegistrationDraft } from '../api/registrationDraftsAPI';
 import InstitutionUserCreationModal from '../components/InstitutionUserCreationModal';
 import AddCaregiverModal from '../components/AddCaregiverModal';
 import CaregiverDetailsModal from '../components/CaregiverDetailsModal';
@@ -188,6 +189,8 @@ const InstitutionAdminDashboard = () => {
   const navigate = useNavigate();
   
   const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
+  const [registrationDrafts, setRegistrationDrafts] = useState([]);
+  const [resumeDraft, setResumeDraft] = useState(null);
   const functions = useMemo(() => {
     try {
       return getFunctions();
@@ -668,6 +671,12 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
+  const loadRegistrationDrafts = async () => {
+    const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+    const drafts = await getRegistrationDrafts(instId);
+    setRegistrationDrafts(drafts);
+  };
+
   const loadDashboardData = async () => {
     try {
       // Use effectiveInstitutionId which includes URL parameter
@@ -695,6 +704,9 @@ const InstitutionAdminDashboard = () => {
           } catch { return []; }
         })().catch(() => [])
       ]);
+
+      // Registration drafts load in parallel — non-blocking
+      loadRegistrationDrafts().catch(() => {});
 
       // Load non-critical data in background (don't block UI)
       const loadBackgroundData = async () => {
@@ -3302,7 +3314,7 @@ const renderMessagesTab = () => {
       name: 'Add Client',
       icon: Heart,
       color: 'bg-sage hover:brightness-95',
-      action: () => setShowCreatePatientModal(true)
+      action: () => { setResumeDraft(null); setShowCreatePatientModal(true); }
     },
     {
       name: 'Add Caregiver',
@@ -3681,7 +3693,7 @@ const renderMessagesTab = () => {
                     Bulk Import
                   </button>
                   <button
-                    onClick={() => setShowCreatePatientModal(true)}
+                    onClick={() => { setResumeDraft(null); setShowCreatePatientModal(true); }}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
                   >
                     <Plus className="h-4 w-4" />
@@ -3690,6 +3702,62 @@ const renderMessagesTab = () => {
                 </div>
               )}
             </div>
+
+            {/* Drafts in progress — resumable client registrations */}
+            {clientSubTab === 'active' && registrationDrafts.length > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="h-4 w-4 text-amber-600" />
+                  <h3 className="text-sm font-semibold text-amber-900">
+                    Drafts in progress ({registrationDrafts.length})
+                  </h3>
+                  <span className="text-xs text-amber-700">Unfinished client registrations — resume or discard</span>
+                </div>
+                <div className="space-y-2">
+                  {registrationDrafts.map((draft) => (
+                    <div
+                      key={draft.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-white border border-amber-100 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">
+                          {draft.clientName || draft.client_name || 'Untitled client'}
+                        </p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Step {draft.currentStep || draft.current_step || 1} of 4
+                          {(draft.lastSavedAt || draft.last_saved_at) && (
+                            <> · saved {new Date(draft.lastSavedAt || draft.last_saved_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</>
+                          )}
+                          {(draft.createdByName || draft.created_by_name) && (
+                            <> · by {draft.createdByName || draft.created_by_name}</>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => { setResumeDraft(draft); setShowCreatePatientModal(true); }}
+                          className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                        >
+                          Resume
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await deleteRegistrationDraft(draft.id);
+                            setRegistrationDrafts(prev => prev.filter(d => d.id !== draft.id));
+                            toast.info('Draft discarded');
+                          }}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                          title="Discard draft"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Sub-tabs: Active Clients | Care Requests | Archived Clients */}
             <div className="flex gap-2 border-b border-gray-200">
@@ -4681,8 +4749,10 @@ const renderMessagesTab = () => {
       {showCreatePatientModal && (
         <CreatePatientModal
           open={showCreatePatientModal}
-          onClose={() => setShowCreatePatientModal(false)}
-          onSuccess={() => loadDashboardData()}
+          onClose={() => { setShowCreatePatientModal(false); setResumeDraft(null); }}
+          onSuccess={() => { setResumeDraft(null); loadDashboardData(); }}
+          resumeDraft={resumeDraft}
+          onDraftChange={loadRegistrationDrafts}
         />
       )}
 
