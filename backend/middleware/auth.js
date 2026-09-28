@@ -1,37 +1,21 @@
 const jwt = require('jsonwebtoken');
 const db = require('../utils/database');
 const { logger } = require('../utils/logger');
+const { getAssignedPatientIds, getDoctorPatientIds } = require('./authorization');
 
 /**
  * Compute the list of patient/client IDs that a caregiver or doctor is allowed to access.
  * Results are cached on req.user so the expensive queries are run once per request instead of
  * once per data query in scopeQuery.
+ * Delegates to authorization.js so auth middleware and row scoping share one source of truth.
  */
 async function getAccessiblePatientIds(user) {
   try {
     if (['caregiver', 'nurse'].includes(user.user_type)) {
-      const assignments = await db('assignments')
-        .where({ caregiver_id: user.id })
-        .select('patient_id', 'client_id');
-      const ids = new Set();
-      for (const a of assignments) {
-        if (a.patient_id) ids.add(a.patient_id);
-        if (a.client_id) ids.add(a.client_id);
-      }
-      return Array.from(ids);
+      return await getAssignedPatientIds(user.id);
     }
-
     if (user.user_type === 'doctor') {
-      const [prescriptions, consultations, teleAppts] = await Promise.all([
-        db('prescriptions').where({ doctor_id: user.id }).select('patient_id'),
-        db('consultations').where({ doctor_id: user.id }).select('client_id'),
-        db('telemedicine_appointments').where({ doctor_id: user.id }).select('client_id'),
-      ]);
-      const ids = new Set();
-      prescriptions.forEach(r => { if (r.patient_id) ids.add(r.patient_id); });
-      consultations.forEach(r => { if (r.client_id) ids.add(r.client_id); });
-      teleAppts.forEach(r => { if (r.client_id) ids.add(r.client_id); });
-      return Array.from(ids);
+      return await getDoctorPatientIds(user.id);
     }
   } catch (error) {
     logger.error('Failed to compute accessible patient IDs:', error);

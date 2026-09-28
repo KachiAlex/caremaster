@@ -77,21 +77,26 @@ const InstitutionCaregiverGuard = ({ children }) => {
         const licenseStatus = await fetchLicenseStatus(effectiveInstitutionId);
         
         if (!licenseStatus.active) {
-          console.warn('⛔ Institution license inactive:', licenseStatus.reason);
-          toast.error(`Access denied. Your institution's license is ${licenseStatus.reason || 'inactive'}. Please contact your administrator.`);
-          signOut(auth).then(() => {
-            navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
-          });
-          return;
+          if (licenseStatus.reason === 'error' || licenseStatus.error) {
+            // Transient check failure (network/server blip) — NOT proof the
+            // license is inactive. Keep the session and let the dashboard load;
+            // signing out here bounces valid users on a flaky connection.
+            console.warn('⚠️ License check inconclusive — allowing access:', licenseStatus.reason);
+            toast.warn('Could not verify license status — connection issue. Your session is unaffected.');
+          } else {
+            console.warn('⛔ Institution license inactive:', licenseStatus.reason);
+            toast.error(`Access denied. Your institution's license is ${licenseStatus.reason || 'inactive'}. Please contact your administrator.`);
+            signOut(auth).then(() => {
+              navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
+            });
+            return;
+          }
+        } else {
+          console.log('✅ Institution license verified for caregiver');
         }
-        console.log('✅ Institution license verified for caregiver');
       } catch (licenseError) {
         console.error('❌ License check error:', licenseError);
-        toast.error('Unable to verify institution license. Access denied.');
-        signOut(auth).then(() => {
-          navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
-        });
-        return;
+        toast.warn('Unable to verify institution license — connection issue. Your session is unaffected.');
       }
 
       // Check if caregiver needs approval (onboarding complete but not yet approved)

@@ -333,7 +333,9 @@ export function onSnapshot(queryRef, callback, errorCallback) {
     // Skip polling while logged out — subscriptions would otherwise fire
     // authenticated requests forever, producing 401 noise and stray
     // error toasts (e.g. "Failed to load conversations" on the login page).
-    if (!localStorage.getItem('token') && !localStorage.getItem('authToken')) return;
+    // On web the JWT lives in an httpOnly cookie (never localStorage), so the
+    // logged-in signal is the cached 'user' blob, which is cleared on logout.
+    if (!localStorage.getItem('user')) return;
     getDocs(queryRef)
       .then((snap) => {
         // Build a filtered snapshot that only includes new docs in docChanges
