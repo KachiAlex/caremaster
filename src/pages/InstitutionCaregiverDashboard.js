@@ -4897,7 +4897,7 @@ const InstitutionCaregiverDashboard = () => {
           renderScheduleTab()
         ) : activeTab === 'activity' ? (
           <CareActivityTab
-            caregiverId={user?.uid}
+            caregiverId={user?.id || user?.uid}
             caregiverName={userProfile?.name || userProfile?.displayName}
             institutionId={effectiveInstitutionId}
             assignedClients={assignedClients}
@@ -4906,6 +4906,7 @@ const InstitutionCaregiverDashboard = () => {
             recentTasks={recentTasks}
             isDoctor={isDoctor}
             isNurse={isNurse}
+            staffDirectory={platformUsers}
             onLogActivity={() => {
               setUnifiedActivityTask(null);
               setShowUnifiedActivityModal(true);
@@ -6628,7 +6629,7 @@ const InstitutionCaregiverDashboard = () => {
 
                   {/* Embedded CareActivityTab — pre-filtered to this client */}
                   <CareActivityTab
-                    caregiverId={user?.uid}
+                    caregiverId={user?.id || user?.uid}
                     caregiverName={userProfile?.name || userProfile?.displayName}
                     institutionId={effectiveInstitutionId}
                     assignedClients={assignedClients}
@@ -6637,6 +6638,8 @@ const InstitutionCaregiverDashboard = () => {
                     recentTasks={recentTasks.filter(t => t.clientId === selectedClient?.id)}
                     isDoctor={isDoctor}
                     isNurse={isNurse}
+                    clientScoped
+                    staffDirectory={platformUsers}
                     onLogActivity={() => {
                       setUnifiedActivityTask(null);
                       setShowUnifiedActivityModal(true);
