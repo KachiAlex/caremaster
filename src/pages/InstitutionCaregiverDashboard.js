@@ -2070,7 +2070,10 @@ const InstitutionCaregiverDashboard = () => {
       
     } catch (error) {
       console.error('Error loading conversations:', error);
-      toast.error('Failed to load conversations');
+      // Auth failures already redirect to login — don't surface a toast
+      if (error.code !== 401 && error.code !== 403) {
+        toast.error('Failed to load conversations');
+      }
     }
   }, [user?.uid, loadPlatformUsers]);
 

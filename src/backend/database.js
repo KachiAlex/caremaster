@@ -327,6 +327,10 @@ export function onSnapshot(queryRef, callback, errorCallback) {
   let isFirstPoll = true;
 
   const poll = () => {
+    // Skip polling while logged out — subscriptions would otherwise fire
+    // authenticated requests forever, producing 401 noise and stray
+    // error toasts (e.g. "Failed to load conversations" on the login page).
+    if (!localStorage.getItem('token') && !localStorage.getItem('authToken')) return;
     getDocs(queryRef)
       .then((snap) => {
         // Build a filtered snapshot that only includes new docs in docChanges

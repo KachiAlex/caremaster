@@ -87,6 +87,7 @@ const COLLECTION_TO_TABLE = {
   analyticsEvents: 'analytics_events',
   nurseReports: 'nurse_reports',
   medicalReports: 'patient_reports',
+  adlLogs: 'adl_logs',
 };
 
 // Column aliases: maps frontend filter keys to actual DB column names per table.
