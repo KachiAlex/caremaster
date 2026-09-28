@@ -387,6 +387,14 @@ async function canModifyRecord(user, tableName, record) {
     return false;
   }
 
+  // users table: any authenticated user can access their own record.
+  // Frontend lookups may address it by row id or firebase_uid — match both
+  // (e.g. refreshUserProfile fetches /users/<firebaseUid>).
+  if (tableName === 'users') {
+    return record.id === user.id ||
+      (!!user.firebase_uid && record.firebase_uid === user.firebase_uid);
+  }
+
   // Patient: check ownership
   if (PATIENT_ROLES.includes(userType)) {
     const ownerCol = OWNER_COLUMN[tableName];
@@ -398,10 +406,6 @@ async function canModifyRecord(user, tableName, record) {
 
   // Caregiver: check assignment
   if (CAREGIVER_ROLES.includes(userType)) {
-    // Special case: users table — caregiver can only modify their own record
-    if (tableName === 'users') {
-      return record.id === user.id;
-    }
     // Dual-owner tables: caregiver can modify if they are the caregiver on the
     // record OR the patient is assigned to them
     const DUAL_OWNER_TABLES = ['assignments', 'care_tasks', 'schedules', 'care_logs', 'medication_logs'];
@@ -430,10 +434,6 @@ async function canModifyRecord(user, tableName, record) {
 
   // Doctor: check patient relationship
   if (DOCTOR_ROLES.includes(userType)) {
-    // Special case: users table — doctor can only modify their own record
-    if (tableName === 'users') {
-      return record.id === user.id;
-    }
     // Tables with a doctor_id column: doctor can modify if they are the
     // doctor on the record OR the patient is one of their patients
     const DOCTOR_OWNER_TABLES = ['telemedicine_appointments', 'telemedicine_calls', 'consultations', 'prescriptions', 'diagnostics'];
@@ -485,6 +485,8 @@ module.exports = {
   scopeQuery,
   canAccessTable,
   canModifyRecord,
+  getAssignedPatientIds,
+  getDoctorPatientIds,
   PATIENT_DATA_TABLES,
   ADMIN_ONLY_TABLES,
   PUBLIC_TABLES,

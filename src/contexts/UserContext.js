@@ -61,8 +61,10 @@ export const UserProvider = ({ children }) => {
           setInstitutionId(userData.institutionId);
         }
 
-        // Fetch extra fields (medicalConditions etc) in the background if needed
-        const userId = userData.uid || userData.id;
+        // Fetch extra fields (medicalConditions etc) in the background if needed.
+        // Prefer the backend row id (uuid) — client queries filter on user_id
+        // which never matches a firebase uid.
+        const userId = userData.id || userData.uid;
         if (userId && !window.location.pathname.startsWith('/login')) {
           // Use cached results if available via getDoc (database.js handles cache)
           Promise.all([
@@ -166,22 +168,23 @@ export const UserProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Call backend logout to invalidate the session server-side
+      // Call backend logout to invalidate the session server-side.
+      // On web the JWT is an httpOnly cookie — credentials:'include' is what
+      // carries it, so the call must run even when no localStorage token exists.
       const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const API_URL = process.env.REACT_APP_API_URL || process.env.REACT_APP_API_BASE_URL || '';
-          await fetch(`${API_URL}/api/auth/logout`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-        } catch (e) {
-          // Best-effort: even if the server call fails, clear local state
-          console.warn('Server logout failed (clearing local state anyway):', e);
-        }
+      try {
+        const API_URL = process.env.REACT_APP_API_URL || process.env.REACT_APP_API_BASE_URL || '';
+        await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch (e) {
+        // Best-effort: even if the server call fails, clear local state
+        console.warn('Server logout failed (clearing local state anyway):', e);
       }
 
       // Clear local storage (must clear all token keys)
@@ -217,7 +220,7 @@ export const UserProvider = ({ children }) => {
   };
 
   const refreshUserProfile = async () => {
-    const userId = user?.uid || user?.id;
+    const userId = user?.id || user?.uid;
     if (!userId) return;
     try {
       const [userDoc, clientData] = await Promise.all([
