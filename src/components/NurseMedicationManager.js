@@ -114,6 +114,7 @@ const NurseMedicationManager = ({
   nurseName,
   institutionId,
   registrationMedications = [],
+  initialChartMed = null,
   onSave,
   onCancel
 }) => {
@@ -133,11 +134,13 @@ const NurseMedicationManager = ({
     administeredAt: '',
     dose: '',
     route: 'oral',
+    administration: '',
     reason: '',
     notes: '',
     sideEffects: '',
     patientResponse: 'normal'
   });
+  const initialChartFired = React.useRef(false);
 
   useEffect(() => {
     loadData();
@@ -161,8 +164,30 @@ const NurseMedicationManager = ({
         .map(normalizeRegistrationMed)
         .filter(m => m.name && !rxNames.has(m.name.toLowerCase().trim()));
 
-      setMedications([...rxNormalized, ...regNormalized]);
+      const merged = [...rxNormalized, ...regNormalized];
+      setMedications(merged);
       setAdministrations(logs || []);
+
+      // If the caller asked to chart a specific medication, open its
+      // administration form directly once the merged list is ready.
+      if (initialChartMed && !initialChartFired.current) {
+        initialChartFired.current = true;
+        const targetName = (initialChartMed.name || '').toLowerCase().trim();
+        const match = merged.find(m =>
+          (initialChartMed.id && m.id === initialChartMed.id) ||
+          (targetName && m.name.toLowerCase().trim() === targetName)
+        );
+        if (match) {
+          handleAdministerMedication(match);
+        } else if (initialChartMed.name) {
+          handleAdministerMedication({
+            name: initialChartMed.name,
+            dosage: initialChartMed.dosage || '',
+            route: initialChartMed.route || 'oral',
+            source: 'registration',
+          });
+        }
+      }
     } catch (error) {
       console.error('Error loading medications:', error);
       toast.error('Failed to load medications');
@@ -210,6 +235,7 @@ const NurseMedicationManager = ({
       administeredAt: new Date().toISOString().slice(0, 16),
       dose: medication.dosage || '',
       route: medication.route && ROUTES.some(r => r.value === medication.route) ? medication.route : 'oral',
+      administration: '',
       reason: '',
       notes: '',
       sideEffects: '',
@@ -224,6 +250,10 @@ const NurseMedicationManager = ({
 
     if (!administerForm.dose.trim() && administerForm.status === 'administered') {
       toast.error('Please enter the administered dose');
+      return;
+    }
+    if (administerForm.status === 'administered' && !administerForm.administration.trim()) {
+      toast.error('Please describe how the medication was served');
       return;
     }
     if (administerForm.status !== 'administered' && !administerForm.reason.trim()) {
@@ -243,9 +273,10 @@ const NurseMedicationManager = ({
         dose: administerForm.dose,
         status: administerForm.status,
         administeredAt: administerForm.administeredAt,
-        notes: administerForm.notes,
+        notes: [administerForm.administration, administerForm.notes].filter(s => s && s.trim()).join(' — '),
         metadata: {
           route: administerForm.route,
+          administrationDetails: administerForm.administration,
           patientResponse: administerForm.patientResponse,
           sideEffects: administerForm.sideEffects,
           reason: administerForm.reason,
@@ -712,6 +743,25 @@ const NurseMedicationManager = ({
 
                   {administerForm.status === 'administered' && (
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        How the medication was served <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={administerForm.administration}
+                        onChange={(e) => setAdministerForm(prev => ({ ...prev, administration: e.target.value }))}
+                        placeholder="e.g., Crushed and mixed with yoghurt, given at bedside with water; client swallowed without difficulty"
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        required
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        This becomes the nurse's medication log entry for this dose.
+                      </p>
+                    </div>
+                  )}
+
+                  {administerForm.status === 'administered' && (
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Client Response</label>
                       <select
                         value={administerForm.patientResponse}
@@ -737,11 +787,11 @@ const NurseMedicationManager = ({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
                     <textarea
                       value={administerForm.notes}
                       onChange={(e) => setAdministerForm(prev => ({ ...prev, notes: e.target.value }))}
-                      placeholder="Additional notes..."
+                      placeholder="Any other observations..."
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     />
