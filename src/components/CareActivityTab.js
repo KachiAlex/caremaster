@@ -15,9 +15,27 @@ const FILTER_CHIPS = [
   { id: 'all', label: 'All', icon: ClipboardList },
   { id: 'task', label: 'Tasks', icon: CheckCircle },
   { id: 'care-note', label: 'Care Notes', icon: FileText },
+  { id: 'clinical-note', label: 'Clinical Notes', icon: FileText },
+  { id: 'medication', label: 'Medications', icon: Pill },
   { id: 'adl', label: 'ADLs', icon: Activity },
   { id: 'vitals', label: 'Vitals', icon: Heart },
 ];
+
+const DATE_RANGES = [
+  { id: 'all', label: 'All time' },
+  { id: 'today', label: 'Today' },
+  { id: '7d', label: 'Last 7 days' },
+  { id: '30d', label: 'Last 30 days' },
+];
+
+const ROLE_LABELS = {
+  caregiver: 'Caregiver',
+  nurse: 'Nurse',
+  doctor: 'Doctor',
+  pharmacist: 'Pharmacist',
+  admin: 'Admin',
+  'super-admin': 'Super Admin',
+};
 
 const STATUS_COLORS = {
   completed: 'bg-green-100 text-green-800',
@@ -34,6 +52,8 @@ const STATUS_COLORS = {
 const TYPE_META = {
   task: { label: 'Task', icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-400' },
   'care-note': { label: 'Care Note', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-400' },
+  'clinical-note': { label: 'Clinical Note', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-400' },
+  medication: { label: 'Medication', icon: Pill, color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-400' },
   adl: { label: 'ADL', icon: Activity, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-400' },
   vitals: { label: 'Vitals', icon: Heart, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-400' },
 };
@@ -58,11 +78,21 @@ const CareActivityTab = ({
   recentTasks = [],
   isDoctor = false,
   isNurse = false,
+  // When true (embedded in the client profile), show activity from ALL
+  // personnel who logged for this client — not just the viewing caregiver.
+  clientScoped = false,
+  // Institution user directory [{id, name, role}] for author attribution.
+  staffDirectory = [],
 }) => {
   const { userProfile, user } = useUser();
   const [filter, setFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [personnelFilter, setPersonnelFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
   const [careLogs, setCareLogs] = useState([]);
   const [adlLogs, setAdlLogs] = useState([]);
+  const [medLogs, setMedLogs] = useState([]);
+  const [clientNotes, setClientNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [weekStart, setWeekStart] = useState(() => {
     const now = new Date();
@@ -76,44 +106,73 @@ const CareActivityTab = ({
   const effectiveCaregiverId = caregiverId || userProfile?.id || userProfile?.uid || user?.uid;
   const clientId = selectedClient?.id || selectedClient?.clientId;
 
-  // Load care logs and ADL logs
+  // Fetch all institution users once so log entries can resolve who wrote them
+  const [directory, setDirectory] = useState(staffDirectory);
+  useEffect(() => {
+    if (staffDirectory.length > 0) {
+      setDirectory(staffDirectory);
+      return;
+    }
+    if (!institutionId) return;
+    (async () => {
+      try {
+        const snap = await getDocs(query(
+          collection(db, 'users'),
+          where('institutionId', '==', institutionId)
+        ));
+        setDirectory(snap.docs.map(d => {
+          const u = d.data();
+          return {
+            id: d.id,
+            name: u.name || u.displayName || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email,
+            role: u.userType || u.type || u.role || 'staff',
+          };
+        }));
+      } catch { /* directory is best-effort */ }
+    })();
+  }, [staffDirectory, institutionId]);
+
+  const resolveAuthor = useCallback((...ids) => {
+    for (const id of ids) {
+      if (!id) continue;
+      const person = directory.find(p => p.id === id);
+      if (person) return person;
+    }
+    return null;
+  }, [directory]);
+
+  // Load activity data. In clientScoped mode (client profile view) fetch every
+  // personnel's logs for this client; otherwise fetch the viewing caregiver's.
   const loadActivityData = useCallback(async () => {
-    if (!effectiveCaregiverId) return;
+    if (clientScoped ? !clientId : !effectiveCaregiverId) return;
     setLoading(true);
+    const scopeWhere = clientScoped
+      ? where('clientId', '==', clientId)
+      : where('caregiverId', '==', effectiveCaregiverId);
     try {
-      const [logsResult, adlResult] = await Promise.all([
-        // Care logs by caregiver
-        (async () => {
-          try {
-            const q = query(
-              collection(db, 'careLogs'),
-              where('caregiverId', '==', effectiveCaregiverId)
-            );
-            const snap = await getDocs(q);
-            return snap.docs.map(d => ({ id: d.id, ...d.data(), _source: 'careLogs' }));
-          } catch { return []; }
-        })(),
-        // ADL logs by caregiver
-        (async () => {
-          try {
-            const q = query(
-              collection(db, 'adlLogs'),
-              where('caregiverId', '==', effectiveCaregiverId)
-            );
-            const snap = await getDocs(q);
-            return snap.docs.map(d => ({ id: d.id, ...d.data(), _source: 'adlLogs' }));
-          } catch { return []; }
-        })(),
+      const fetchColl = async (coll) => {
+        try {
+          const snap = await getDocs(query(collection(db, coll), scopeWhere));
+          return snap.docs.map(d => ({ id: d.id, ...d.data(), _source: coll }));
+        } catch { return []; }
+      };
+      const [logsResult, adlResult, medResult, noteResult] = await Promise.all([
+        fetchColl('careLogs'),
+        fetchColl('adlLogs'),
+        fetchColl('medicationLogs'),
+        fetchColl('clientActivities'),
       ]);
 
       setCareLogs(logsResult);
       setAdlLogs(adlResult);
+      setMedLogs(medResult);
+      setClientNotes(noteResult);
     } catch (err) {
       console.error('Error loading activity data:', err);
     } finally {
       setLoading(false);
     }
-  }, [effectiveCaregiverId]);
+  }, [effectiveCaregiverId, clientScoped, clientId]);
 
   useEffect(() => {
     loadActivityData();
@@ -126,6 +185,7 @@ const CareActivityTab = ({
     // Tasks
     recentTasks.forEach(task => {
       const time = toDate(task.scheduledTime || task.dueDate || task.time || task.createdAt);
+      const author = resolveAuthor(task.caregiverId, task.assignedTo, task.createdBy);
       items.push({
         id: task.id,
         type: 'task',
@@ -138,39 +198,49 @@ const CareActivityTab = ({
         time,
         photos: task.photos,
         notes: task.completionNotes || task.notes,
+        authorName: task.caregiverName || author?.name,
+        authorRole: author?.role,
         _source: 'tasks',
       });
     });
 
-    // Care logs (includes vitals)
+    // Care logs (includes vitals). New writes put the rich payload into the
+    // `details` jsonb column; legacy rows only carry caregiver_id + created_at.
     careLogs.forEach(log => {
-      const isVitals = log.logType === 'vitals' || log.bloodPressure || log.heartRate || log.temperature;
+      const d = log.details || {};
+      const vitals = d.vitals || {};
+      const isVitals = log.category === 'vitals' || d.logType === 'vitals' || log.logType === 'vitals'
+        || log.bloodPressure || log.heartRate || log.temperature || vitals.bloodPressure;
+      const author = resolveAuthor(log.caregiverId, log.recordedBy);
       items.push({
         id: log.id,
         type: isVitals ? 'vitals' : 'care-note',
-        title: isVitals ? 'Vital Signs Recorded' : (log.activityDescription || log.observations || 'Care Note'),
-        description: log.observations || log.concerns,
-        clientName: log.clientName || 'Client',
-        clientId: log.clientId,
+        title: isVitals ? 'Vital Signs Recorded' : (d.activityDescription || log.activityDescription || log.observations || log.notes || 'Care Note'),
+        description: log.notes || log.observations || log.concerns || d.observations || d.concerns,
+        clientName: log.clientName || d.clientName || 'Client',
+        clientId: log.clientId || log.patientId,
         status: log.status || 'completed',
-        mood: log.moodBehavior,
-        time: toDate(log.logDate || log.createdAt) || toDate(log.createdAt),
-        photos: log.photos,
-        // Vitals-specific
-        bloodPressure: log.bloodPressure,
-        heartRate: log.heartRate,
-        temperature: log.temperature,
-        respiratoryRate: log.respiratoryRate,
-        oxygenSat: log.oxygenSaturation,
-        bloodSugar: log.bloodSugar,
-        painLevel: log.painLevel,
-        weight: log.weight,
+        mood: log.mood || log.moodBehavior,
+        time: toDate(log.logTime) || toDate(log.logDate) || toDate(log.createdAt),
+        photos: d.photos || log.photos,
+        authorName: d.caregiverName || log.caregiverName || author?.name,
+        authorRole: d.roleType || author?.role || log.source,
+        // Vitals-specific (new writes nest under details.vitals)
+        bloodPressure: log.bloodPressure || vitals.bloodPressure,
+        heartRate: log.heartRate || vitals.heartRate,
+        temperature: log.temperature || vitals.temperature,
+        respiratoryRate: log.respiratoryRate || vitals.respiratoryRate,
+        oxygenSat: log.oxygenSaturation || vitals.oxygenSaturation,
+        bloodSugar: log.bloodSugar || vitals.bloodSugar,
+        painLevel: log.painLevel ?? vitals.painLevel,
+        weight: log.weight || vitals.weight,
         _source: log._source,
       });
     });
 
     // ADL logs
     adlLogs.forEach(log => {
+      const author = resolveAuthor(log.caregiverId, log.recordedBy);
       items.push({
         id: log.id,
         type: 'adl',
@@ -181,8 +251,48 @@ const CareActivityTab = ({
         status: log.status || 'completed',
         adlCategory: log.category,
         time: toDate(log.timestamp || log.createdAt),
-        photos: log.photos,
+        photos: log.photos || log.metadata?.photos,
+        authorName: log.caregiverName || log.metadata?.caregiverName || author?.name,
+        authorRole: author?.role,
         _source: log._source,
+      });
+    });
+
+    // Medication administration (MAR) entries
+    medLogs.forEach(log => {
+      const author = resolveAuthor(log.recordedBy, log.caregiverId);
+      const st = (log.status || 'administered').toLowerCase();
+      items.push({
+        id: log.id,
+        type: 'medication',
+        title: `${log.medicationName || 'Medication'} — ${st.charAt(0).toUpperCase() + st.slice(1)}`,
+        description: [log.dosage, log.notes].filter(Boolean).join(' · '),
+        clientName: log.clientName || 'Client',
+        clientId: log.clientId || log.patientId,
+        status: st === 'administered' ? 'completed' : st,
+        time: toDate(log.takenTime || log.scheduledTime || log.createdAt),
+        authorName: author?.name,
+        authorRole: author?.role || log.source,
+        _source: log._source,
+      });
+    });
+
+    // Clinical notes (client_activities feed)
+    clientNotes.forEach(note => {
+      const meta = note.metadata || {};
+      const author = resolveAuthor(note.performedBy);
+      items.push({
+        id: note.id,
+        type: 'clinical-note',
+        title: meta.noteType ? `${meta.noteType} note` : 'Clinical Note',
+        description: note.description,
+        clientName: note.clientName || 'Client',
+        clientId: note.clientId || note.patientId,
+        status: 'completed',
+        time: toDate(note.createdAt),
+        authorName: meta.authorName || meta.performedByName || author?.name,
+        authorRole: meta.authorRole || author?.role,
+        _source: note._source,
       });
     });
 
@@ -194,13 +304,41 @@ const CareActivityTab = ({
     });
 
     return items;
-  }, [recentTasks, careLogs, adlLogs]);
+  }, [recentTasks, careLogs, adlLogs, medLogs, clientNotes, resolveAuthor]);
 
-  // Apply filter
+  // Distinct roles + personnel present in the data (for the filter dropdowns)
+  const roleOptions = useMemo(() => {
+    const roles = new Set();
+    mergedTimeline.forEach(i => i.authorRole && roles.add(i.authorRole));
+    return Array.from(roles);
+  }, [mergedTimeline]);
+
+  const personnelOptions = useMemo(() => {
+    const names = new Set();
+    mergedTimeline.forEach(i => i.authorName && names.add(i.authorName));
+    return Array.from(names).sort();
+  }, [mergedTimeline]);
+
+  // Apply type + role + personnel + date filters
   const filteredTimeline = useMemo(() => {
-    if (filter === 'all') return mergedTimeline;
-    return mergedTimeline.filter(item => item.type === filter);
-  }, [mergedTimeline, filter]);
+    let items = mergedTimeline;
+    if (filter !== 'all') items = items.filter(item => item.type === filter);
+    if (roleFilter !== 'all') items = items.filter(item => item.authorRole === roleFilter);
+    if (personnelFilter !== 'all') items = items.filter(item => item.authorName === personnelFilter);
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      let start = null;
+      if (dateFilter === 'today') {
+        start = new Date(now); start.setHours(0, 0, 0, 0);
+      } else if (dateFilter === '7d') {
+        start = new Date(now.getTime() - 7 * 86400000);
+      } else if (dateFilter === '30d') {
+        start = new Date(now.getTime() - 30 * 86400000);
+      }
+      if (start) items = items.filter(item => item.time && item.time >= start);
+    }
+    return items;
+  }, [mergedTimeline, filter, roleFilter, personnelFilter, dateFilter]);
 
   // Stats
   const stats = useMemo(() => {
@@ -220,10 +358,13 @@ const CareActivityTab = ({
 
   const formatTime = (date) => {
     if (!date) return '';
-    return date.toLocaleString('en-US', {
+    const opts = {
       month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit'
-    });
+    };
+    // Include the year for entries older than ~6 months
+    if (Date.now() - date.getTime() > 180 * 86400000) opts.year = 'numeric';
+    return date.toLocaleString('en-US', opts);
   };
 
   const renderVitals = (item) => {
@@ -322,27 +463,53 @@ const CareActivityTab = ({
       {/* ── Filter chips + Timeline ── */}
       <div className="cm-card overflow-hidden flex flex-col">
         {/* Sticky filter bar */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 flex items-center gap-2 overflow-x-auto"
-             style={{ scrollbarWidth: 'thin' }}
-        >
-          {FILTER_CHIPS.map(chip => {
-            const Icon = chip.icon;
-            const active = filter === chip.id;
-            return (
-              <button
-                key={chip.id}
-                onClick={() => setFilter(chip.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-full transition flex-shrink-0 ${
-                  active
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {chip.label}
-              </button>
-            );
-          })}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 space-y-2">
+          <div className="flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'thin' }}>
+            {FILTER_CHIPS.map(chip => {
+              const Icon = chip.icon;
+              const active = filter === chip.id;
+              return (
+                <button
+                  key={chip.id}
+                  onClick={() => setFilter(chip.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-full transition flex-shrink-0 ${
+                    active
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {chip.label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Role / personnel / date filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={personnelFilter}
+              onChange={(e) => setPersonnelFilter(e.target.value)}
+              className="px-2 py-1 text-xs border border-gray-300 rounded-lg bg-white text-gray-700"
+            >
+              <option value="all">All personnel</option>
+              {personnelOptions.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-2 py-1 text-xs border border-gray-300 rounded-lg bg-white text-gray-700"
+            >
+              <option value="all">All roles</option>
+              {roleOptions.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
+            </select>
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="px-2 py-1 text-xs border border-gray-300 rounded-lg bg-white text-gray-700"
+            >
+              {DATE_RANGES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+            </select>
+          </div>
         </div>
 
         {/* Timeline — scrollable */}
@@ -394,6 +561,14 @@ const CareActivityTab = ({
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
                                 {formatTime(item.time)}
+                              </span>
+                            )}
+                            {(item.authorName || item.authorRole) && (
+                              <span className="flex items-center gap-1 text-gray-600 font-medium">
+                                by {item.authorName || 'Staff'}
+                                {item.authorRole && (
+                                  <span className="text-gray-400 font-normal">· {ROLE_LABELS[item.authorRole] || item.authorRole}</span>
+                                )}
                               </span>
                             )}
                           </div>

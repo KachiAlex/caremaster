@@ -214,7 +214,7 @@ const WRITABLE_FIELDS = {
   care_tasks: ['title', 'description', 'status', 'completed_at', 'caregiver_id', 'patient_id', 'client_id', 'client_name', 'caregiver_name', 'institution_id', 'category', 'priority', 'task_type', 'due_date', 'due_time', 'scheduled_date', 'scheduled_time', 'notes', 'completion_notes', 'photos', 'created_by', 'created_by_name', 'metadata', 'created_at', 'updated_at'],
   assignments: ['client_id', 'caregiver_id', 'institution_id', 'patient_id', 'start_date', 'end_date', 'status', 'type', 'notes', 'metadata', 'client_name', 'client_email', 'caregiver_name', 'caregiver_email', 'assigned_by', 'assigned_by_name', 'assignment_type', 'title', 'description', 'instructions', 'assigned_to_role', 'due_date', 'due_time', 'created_at', 'updated_at'],
   messages: ['conversation_id', 'sender_id', 'receiver_id', 'recipient_id', 'content', 'text', 'message_type', 'attachments', 'read', 'sent_at', 'read_at', 'created_at', 'sender_id'],
-  care_logs: ['assignment_id', 'caregiver_id', 'client_id', 'patient_id', 'recorded_by', 'source', 'notes', 'mood', 'timestamp', 'metadata', 'created_at', 'updated_at'],
+  care_logs: ['assignment_id', 'caregiver_id', 'client_id', 'patient_id', 'recorded_by', 'source', 'notes', 'mood', 'category', 'details', 'log_time', 'location', 'task_id', 'institution_id', 'metadata', 'created_at', 'updated_at'],
   care_plans: ['client_id', 'title', 'description', 'start_date', 'end_date', 'status'],
   vital_signs: ['patient_id', 'recorded_by', 'institution_id', 'source', 'recorded_at', 'temperature', 'temperature_unit', 'heart_rate', 'respiratory_rate', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'oxygen_saturation', 'weight', 'weight_unit', 'height', 'height_unit', 'blood_glucose', 'pain_level', 'notes', 'metadata', 'created_at', 'updated_at'],
   prescriptions: ['patient_id', 'doctor_id', 'institution_id', 'source', 'medication_name', 'dosage', 'frequency', 'route', 'start_date', 'end_date', 'instructions', 'side_effects', 'status', 'metadata', 'created_at', 'updated_at'],
@@ -317,6 +317,79 @@ function filterWritableFields(table, data) {
     }
   }
   return filtered;
+}
+
+// Normalize rich frontend payloads into the actual care_logs columns before
+// whitelisting. The client sends logDate/logTime/observations/activityDescription/
+// vitals/photos — none of which are real columns. Previously they were silently
+// dropped by filterWritableFields, leaving empty log rows. Here we fold them into
+// notes / details (jsonb) / log_time / mood / category.
+function normalizeCareLogPayload(data) {
+  const out = { ...data };
+
+  // log_date (Timestamp {seconds} or ISO string) + log_time ("HH:MM:SS") →
+  // a single log_time timestamp
+  const ld = data.log_date;
+  let base = null;
+  if (ld && typeof ld === 'object' && ld.seconds != null) base = new Date(ld.seconds * 1000);
+  else if (ld) base = new Date(ld);
+  if (base && !isNaN(base.getTime())) {
+    const lt = data.log_time;
+    if (typeof lt === 'string' && /^\d{1,2}:\d{2}/.test(lt)) {
+      const [h, m, s] = lt.split(':').map(Number);
+      base.setHours(h || 0, m || 0, s || 0);
+    }
+    out.log_time = base;
+  } else {
+    const ltParsed = new Date(data.log_time);
+    out.log_time = !isNaN(ltParsed.getTime()) ? ltParsed : new Date();
+  }
+
+  if (!out.notes) {
+    out.notes = data.observations || data.activity_description || data.concerns || null;
+  }
+  if (!out.mood && data.mood_behavior) out.mood = data.mood_behavior;
+  if (!out.category || out.category === 'general') {
+    out.category = data.log_type || data.category || 'general';
+  }
+
+  // Pack the display payload into details (jsonb) so nothing is lost
+  const details = (data.details && typeof data.details === 'object') ? { ...data.details } : {};
+  const pack = {
+    activityDescription: data.activity_description,
+    observations: data.observations,
+    concerns: data.concerns,
+    logType: data.log_type,
+    clientName: data.client_name,
+    caregiverName: data.caregiver_name,
+    roleType: data.role_type,
+    photos: data.photos,
+  };
+  for (const [k, v] of Object.entries(pack)) {
+    if (v !== undefined && v !== null) details[k] = v;
+  }
+  const vitals = {
+    bloodPressure: data.blood_pressure,
+    heartRate: data.heart_rate,
+    temperature: data.temperature,
+    respiratoryRate: data.respiratory_rate,
+    oxygenSaturation: data.oxygen_saturation,
+    bloodSugar: data.blood_sugar,
+    painLevel: data.pain_level,
+    weight: data.weight,
+  };
+  const vitalsDefined = Object.fromEntries(
+    Object.entries(vitals).filter(([, v]) => v !== undefined && v !== null && v !== '')
+  );
+  if (Object.keys(vitalsDefined).length) details.vitals = vitalsDefined;
+  if (Object.keys(details).length) out.details = details;
+
+  return out;
+}
+
+function normalizeInsertData(tableName, data) {
+  if (tableName === 'care_logs') return normalizeCareLogPayload(data);
+  return data;
 }
 
 // JSON-stringify array/plain-object values so they insert correctly into jsonb
@@ -807,7 +880,9 @@ router.post('/:table', async (req, res) => {
       return res.status(403).json({ success: false, message: access.reason });
     }
 
-    const data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body, tableName)));
+    const data = serializeJsonValues(
+      filterWritableFields(tableName, normalizeInsertData(tableName, mapToSnakeCase(req.body, tableName)))
+    );
 
     // ─── Row-level authorization: enforce ownership on create ───
     // Patients can only create records for themselves. If they try to set
