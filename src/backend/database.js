@@ -58,7 +58,10 @@ async function apiFetch(path, options = {}) {
     throw err;
   }
 
-  if (res.status === 401 || res.status === 403) {
+  // Only 401 means the session is unauthenticated. 403 is an authorization
+  // denial for a specific record/action — it must not tear down the session
+  // or the whole app signs the user out over a single denied read.
+  if (res.status === 401) {
     if (!isAuthExpired()) {
       // Clear stored credentials and let the application layer handle navigation
       // so that background API calls don't force a full page reload.

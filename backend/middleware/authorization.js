@@ -244,18 +244,26 @@ async function scopeQuery(query, user, tableName) {
       return query;
     }
 
-    if (ownerCol === 'caregiver_id' || ownerCol === 'user_id') {
-      // Tables owned by the caregiver themselves
-      query.where(`${tableName}.${ownerCol}`, user.id);
-    } else if (PATIENT_DATA_TABLES.includes(tableName)) {
-      // Patient data tables: scope to assigned patients
+    if (PATIENT_DATA_TABLES.includes(tableName)) {
+      // Patient data tables: scope to assigned patients. For clients/patients
+      // tables, assignment ids may reference either the client row id or the
+      // client's user account id — match on both.
       if (patientIds.length === 0) {
         // No assignments — return nothing
         query.whereRaw('1=0');
+      } else if (tableName === 'clients' || tableName === 'patients') {
+        const hasUserId = tableName === 'clients' ? await tableHasColumn('clients', 'user_id') : false;
+        query.where(function() {
+          this.whereIn(`${tableName}.id`, patientIds);
+          if (hasUserId) this.orWhereIn(`${tableName}.user_id`, patientIds);
+        });
       } else {
         const col = ownerCol || 'patient_id';
         query.whereIn(`${tableName}.${col}`, patientIds);
       }
+    } else if (ownerCol === 'caregiver_id' || ownerCol === 'user_id') {
+      // Tables owned by the caregiver themselves
+      query.where(`${tableName}.${ownerCol}`, user.id);
     }
     return query;
   }
@@ -294,17 +302,25 @@ async function scopeQuery(query, user, tableName) {
 
     const ownerCol = OWNER_COLUMN[tableName];
 
-    if (ownerCol === 'doctor_id' || ownerCol === 'user_id') {
-      query.where(`${tableName}.${ownerCol}`, user.id);
-    } else if (PATIENT_DATA_TABLES.includes(tableName)) {
-      // Doctors see records for patients they have prescriptions or appointments with
-      const patientIds = await getDoctorPatientIds(user.id);
-      if (patientIds.length === 0) {
+    if (PATIENT_DATA_TABLES.includes(tableName)) {
+      // Doctors see records for patients they are assigned to or have
+      // clinical records with. For clients/patients tables the assignment
+      // ids may be client row ids or client user ids — match on both.
+      const ids = patientIds;
+      if (ids.length === 0) {
         query.whereRaw('1=0');
+      } else if (tableName === 'clients' || tableName === 'patients') {
+        const hasUserId = tableName === 'clients' ? await tableHasColumn('clients', 'user_id') : false;
+        query.where(function() {
+          this.whereIn(`${tableName}.id`, ids);
+          if (hasUserId) this.orWhereIn(`${tableName}.user_id`, ids);
+        });
       } else {
         const col = ownerCol || 'patient_id';
-        query.whereIn(`${tableName}.${col}`, patientIds);
+        query.whereIn(`${tableName}.${col}`, ids);
       }
+    } else if (ownerCol === 'doctor_id' || ownerCol === 'user_id') {
+      query.where(`${tableName}.${ownerCol}`, user.id);
     }
     return query;
   }
@@ -315,20 +331,37 @@ async function scopeQuery(query, user, tableName) {
 }
 
 /**
- * Get patient IDs for a doctor (via prescriptions, appointments, consultations).
+ * Get patient IDs for a doctor (via assignments, prescriptions, appointments,
+ * consultations, and direct clients.assigned_doctor links).
+ *
+ * Returns a mix of client row ids (clients.id) and client user ids
+ * (clients.user_id) because different tables store either form in their
+ * patient_id/client_id columns — scoping must match either.
  */
 async function getDoctorPatientIds(doctorUserId) {
   try {
-    const [prescriptions, consultations, teleAppts] = await Promise.all([
+    const [prescriptions, consultations, teleAppts, assignments, directClients] = await Promise.all([
       db('prescriptions').where({ doctor_id: doctorUserId }).select('patient_id'),
       db('consultations').where({ doctor_id: doctorUserId }).select('client_id'),
       db('telemedicine_appointments').where({ doctor_id: doctorUserId }).select('client_id'),
+      // Doctors are assigned to clients through the same assignments table as
+      // caregivers (caregiver_id holds any staff user's id).
+      db('assignments').where({ caregiver_id: doctorUserId }).whereNot('status', 'cancelled').select('patient_id', 'client_id'),
+      db('clients').where({ assigned_doctor: doctorUserId }).select('id', 'user_id'),
     ]);
 
     const ids = new Set();
     prescriptions.forEach(r => { if (r.patient_id) ids.add(r.patient_id); });
     consultations.forEach(r => { if (r.client_id) ids.add(r.client_id); });
     teleAppts.forEach(r => { if (r.client_id) ids.add(r.client_id); });
+    assignments.forEach(r => {
+      if (r.patient_id) ids.add(r.patient_id);
+      if (r.client_id) ids.add(r.client_id);
+    });
+    directClients.forEach(r => {
+      if (r.id) ids.add(r.id);
+      if (r.user_id) ids.add(r.user_id);
+    });
     return Array.from(ids);
   } catch (err) {
     logger.error('Failed to fetch doctor patient IDs:', err);
@@ -378,14 +411,19 @@ async function canModifyRecord(user, tableName, record) {
       const col = OWNER_COLUMN[tableName] || 'patient_id';
       return patientIds.includes(record[col]);
     }
+    if (PATIENT_DATA_TABLES.includes(tableName)) {
+      const patientIds = await getAssignedPatientIds(user.id);
+      if (tableName === 'clients' || tableName === 'patients') {
+        // Assignment ids may reference the client row id or the client's
+        // user account id — match either.
+        return patientIds.includes(record.id) || patientIds.includes(record.user_id);
+      }
+      const col = OWNER_COLUMN[tableName] || 'patient_id';
+      return patientIds.includes(record[col]);
+    }
     const ownerCol = OWNER_COLUMN[tableName];
     if (ownerCol === 'caregiver_id' || ownerCol === 'user_id') {
       return record[ownerCol] === user.id;
-    }
-    if (PATIENT_DATA_TABLES.includes(tableName)) {
-      const patientIds = await getAssignedPatientIds(user.id);
-      const col = ownerCol || 'patient_id';
-      return patientIds.includes(record[col]);
     }
     return true; // Non-patient table
   }
@@ -405,14 +443,17 @@ async function canModifyRecord(user, tableName, record) {
       const col = OWNER_COLUMN[tableName] || 'patient_id';
       return patientIds.includes(record[col]);
     }
+    if (PATIENT_DATA_TABLES.includes(tableName)) {
+      const patientIds = await getDoctorPatientIds(user.id);
+      if (tableName === 'clients' || tableName === 'patients') {
+        return patientIds.includes(record.id) || patientIds.includes(record.user_id);
+      }
+      const col = OWNER_COLUMN[tableName] || 'patient_id';
+      return patientIds.includes(record[col]);
+    }
     const ownerCol = OWNER_COLUMN[tableName];
     if (ownerCol === 'doctor_id' || ownerCol === 'user_id') {
       return record[ownerCol] === user.id;
-    }
-    if (PATIENT_DATA_TABLES.includes(tableName)) {
-      const patientIds = await getDoctorPatientIds(user.id);
-      const col = ownerCol || 'patient_id';
-      return patientIds.includes(record[col]);
     }
     return true;
   }
