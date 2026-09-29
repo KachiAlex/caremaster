@@ -459,6 +459,31 @@ const InstitutionAdminDashboard = () => {
       setActiveTab(prevTab);
     }
   }, [goBack]);
+
+  // Deep-link support: ?tab=<tabId> opens a specific tab and
+  // ?conversation=<id> selects that conversation (e.g. notification clicks).
+  const deepLinkedConvRef = useRef(null);
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const convParam = searchParams.get('conversation');
+    if (!convParam || deepLinkedConvRef.current === convParam) return;
+    if (!Array.isArray(conversations) || conversations.length === 0) return;
+    const match = conversations.find(c => (c.conversationId || c.id) === convParam);
+    if (!match) return;
+    deepLinkedConvRef.current = convParam;
+    setActiveTab('messages');
+    setSelectedConversation(match);
+    if (isMobileMessagingView) {
+      setShowMobileChatPane(true);
+    } else {
+      setIsConversationListCollapsed(false);
+    }
+    loadMessagesForConversation(convParam);
+  }, [searchParams, conversations, isMobileMessagingView]);
   
   // Initialize call service
   const callService = new CallService();

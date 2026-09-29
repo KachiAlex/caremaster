@@ -2,14 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, X, Check, AlertTriangle, Calendar, ClipboardList, MessageSquare, Users, Stethoscope, Heart, Trash2 } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
+import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import UserNameWithAvatar from './UserNameWithAvatar';
 
 const NotificationPanel = ({ userId }) => {
   const navigate = useNavigate();
+  const { userProfile } = useUser();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Message notifications carry a generic '/messages' navigateTo, but each
+  // role has its own messaging surface — sending a caregiver to /messages
+  // lands them in the client portal, which bounces them to /login.
+  const resolveNavigateTo = (notification) => {
+    const raw = notification.metadata?.navigateTo || notification.data?.navigateTo || notification.data?.actionUrl;
+    const convId = notification.metadata?.conversationId || notification.data?.conversationId;
+    const isMessage = notification.type === 'message' || (raw === '/messages' && convId);
+    if (!isMessage) return raw;
+
+    const role = userProfile?.userType || userProfile?.user_type;
+    const instId = userProfile?.institutionId || userProfile?.institution_id;
+    const conv = convId ? `conversation=${convId}` : '';
+
+    if (['caregiver', 'doctor', 'nurse', 'pharmacist'].includes(role)) {
+      return instId
+        ? `/institution-caregiver/dashboard?institution=${instId}&tab=messages${conv ? `&${conv}` : ''}`
+        : `/service-provider/messages${conv ? `?${conv}` : ''}`;
+    }
+    if (['admin', 'institution-admin', 'institution_admin'].includes(role)) {
+      return instId
+        ? `/institution-admin/dashboard?institution=${instId}&tab=messages${conv ? `&${conv}` : ''}`
+        : `/admin`;
+    }
+    return `/messages${conv ? `?${conv}` : ''}`;
+  };
 
   const handleNotificationClick = async (notification) => {
     try {
@@ -18,8 +46,7 @@ const NotificationPanel = ({ userId }) => {
         await markAsRead(notification.id);
       }
 
-      // Navigate to relevant section — unified on metadata.navigateTo
-      const navigateTo = notification.metadata?.navigateTo || notification.data?.navigateTo || notification.data?.actionUrl;
+      const navigateTo = resolveNavigateTo(notification);
       if (navigateTo) {
         navigate(navigateTo);
         setIsOpen(false);

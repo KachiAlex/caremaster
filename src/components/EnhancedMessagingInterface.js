@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import { useSearchParams } from 'react-router-dom';
+import {
   MessageSquare, 
   Send, 
   Search, 
@@ -45,6 +46,8 @@ import OnlineStatusService from '../services/onlineStatusService';
 
 const EnhancedMessagingInterface = () => {
   const { userProfile, userRole } = useUser();
+  const [searchParams] = useSearchParams();
+  const deepLinkedRef = useRef(null);
   const [allUsers, setAllUsers] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -151,7 +154,17 @@ const EnhancedMessagingInterface = () => {
         }
         
         if (userConversations.length > 0 && !selectedConversation) {
-          setSelectedConversation(userConversations[0]);
+          // Honor ?conversation=<id> deep links (e.g. notification clicks)
+          const convParam = searchParams.get('conversation');
+          const target = convParam
+            ? (conversationsWithUsers.find(c => c.id === convParam) || conversationsWithUsers[0])
+            : conversationsWithUsers[0];
+          if (convParam) deepLinkedRef.current = convParam;
+          if (convParam && target.id === convParam) {
+            selectConversation(target);
+          } else {
+            setSelectedConversation(target);
+          }
         }
       } catch (error) {
         console.error('Error loading data:', error);
@@ -179,8 +192,19 @@ const EnhancedMessagingInterface = () => {
       const conversationsWithUsers = updatedConversations.map((conversation) =>
         resolveOtherUser(conversation, userId, allUsers)
       );
-      
+
       setConversations(conversationsWithUsers);
+
+      // Deep-link: ?conversation=<id> — select it once it appears (the
+      // subscription may deliver it after the initial load).
+      const convParam = searchParams.get('conversation');
+      if (convParam && deepLinkedRef.current !== convParam) {
+        const match = conversationsWithUsers.find(c => c.id === convParam);
+        if (match) {
+          deepLinkedRef.current = convParam;
+          selectConversation(match);
+        }
+      }
     });
 
     return () => unsubscribe();
