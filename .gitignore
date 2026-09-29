@@ -76,3 +76,4 @@ gcloud-info.json
 # Backups (never track local backup copies)
 *.backup
 *.bak
+backend/.vapid-keys.json

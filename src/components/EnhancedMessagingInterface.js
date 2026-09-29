@@ -64,6 +64,29 @@ const EnhancedMessagingInterface = () => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Resolve the other participant in a 1:1 conversation to a user object.
+  // Prefers the institution users list, then denormalized participantDetails.
+  const resolveOtherUser = (conversation, userId, userList) => {
+    const otherParticipantId = (conversation.participants || [])
+      .find(id => String(id) !== String(userId));
+    if (!otherParticipantId) return conversation;
+
+    const found = (userList || []).find(u => String(u.id) === String(otherParticipantId));
+    if (found) return { ...conversation, otherUser: found };
+
+    const detail = (conversation.participantDetails || [])
+      .find(p => String(p.id) === String(otherParticipantId));
+    return {
+      ...conversation,
+      otherUser: {
+        id: otherParticipantId,
+        name: detail?.name || 'Unknown User',
+        email: detail?.email || '',
+        role: detail?.role || 'user',
+      },
+    };
+  };
+
   // Scroll to bottom when new messages arrive
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -113,29 +136,7 @@ const EnhancedMessagingInterface = () => {
         
         // Populate otherUser for each conversation
         const conversationsWithUsers = await Promise.all(
-          userConversations.map(async (conversation) => {
-            // Find the other participant
-            const otherParticipantId = conversation.participants.find(id => id !== userId);
-            if (otherParticipantId) {
-              // Find the user in our filteredUsers list
-              const otherUser = filteredUsers.find(user => user.id === otherParticipantId);
-              if (otherUser) {
-                return { ...conversation, otherUser };
-              } else {
-                // If user not found in filteredUsers, create a basic user object
-                return { 
-                  ...conversation, 
-                  otherUser: { 
-                    id: otherParticipantId, 
-                    name: 'Unknown User', 
-                    email: 'unknown@example.com',
-                    role: 'user' 
-                  } 
-                };
-              }
-            }
-            return conversation;
-          })
+          userConversations.map(async (conversation) => resolveOtherUser(conversation, userId, filteredUsers))
         );
         
         setConversations(conversationsWithUsers);
@@ -175,29 +176,9 @@ const EnhancedMessagingInterface = () => {
     const userId = userProfile.id || userProfile.uid;
     const unsubscribe = subscribeToUserConversations(userId, (updatedConversations) => {
       // Populate otherUser for each conversation
-      const conversationsWithUsers = updatedConversations.map((conversation) => {
-        // Find the other participant
-        const otherParticipantId = conversation.participants.find(id => id !== userId);
-        if (otherParticipantId) {
-          // Find the user in our allUsers list
-          const otherUser = allUsers.find(user => user.id === otherParticipantId);
-          if (otherUser) {
-            return { ...conversation, otherUser };
-          } else {
-            // If user not found in allUsers, create a basic user object
-            return { 
-              ...conversation, 
-              otherUser: { 
-                id: otherParticipantId, 
-                name: 'Unknown User', 
-                email: 'unknown@example.com',
-                role: 'user' 
-              } 
-            };
-          }
-        }
-        return conversation;
-      });
+      const conversationsWithUsers = updatedConversations.map((conversation) =>
+        resolveOtherUser(conversation, userId, allUsers)
+      );
       
       setConversations(conversationsWithUsers);
     });

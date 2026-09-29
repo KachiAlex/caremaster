@@ -1,36 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Video, 
-  Phone, 
-  MessageSquare, 
-  Calendar, 
-  Clock, 
-  User, 
-  Camera, 
-  Mic, 
-  MicOff, 
-  VideoOff, 
-  PhoneOff,
-  Settings,
-  Share,
-  Circle,
-  StopCircle,
+import React, { useState, useEffect } from 'react';
+import {
+  Video,
+  Phone,
+  Calendar,
+  Clock,
   Download,
-  Upload,
   FileText,
-  AlertTriangle,
-  CheckCircle,
   Plus,
   X,
-  Search,
   Filter,
   MoreVertical
 } from 'lucide-react';
-import telemedicineService from '../services/telemedicineService';
 import telemedicineAPI from '../api/telemedicineAPI';
 import { toast } from 'react-toastify';
 import { useAuthState } from 'backend/auth-hooks';
 import DocumentManager from '../components/DocumentManager';
+import ConsultationCall from '../components/ConsultationCall';
 import { auth } from '../backend/config';
 import { useUser } from '../contexts/UserContext';
 import { notifyAdmins, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../services/notificationService';
@@ -39,19 +24,10 @@ const Telemedicine = () => {
   const [user, userLoading] = useAuthState(auth);
   const { userProfile, institutionId: contextInstitutionId } = useUser();
   const [appointments, setAppointments] = useState([]);
+  // The appointment the user is currently in a video call for (or null)
   const [activeCall, setActiveCall] = useState(null);
-  const [isVideoOn, setIsVideoOn] = useState(true);
-  const [isAudioOn, setIsAudioOn] = useState(true);
-  const [isRecording, setIsRecording] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isInCall, setIsInCall] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [remoteUsers, setRemoteUsers] = useState([]);
-  const [connectionState, setConnectionState] = useState('disconnected');
   const [error, setError] = useState(null);
-  const [availableDevices, setAvailableDevices] = useState({ cameras: [], microphones: [] });
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [userType, setUserType] = useState('Client'); // 'Client' or 'doctor'
   const [showDocuments, setShowDocuments] = useState(false);
   const [selectedAppointmentForDocs, setSelectedAppointmentForDocs] = useState(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -63,167 +39,33 @@ const Telemedicine = () => {
     notes: ''
   });
   const [submittingRequest, setSubmittingRequest] = useState(false);
-  const callTimerRef = useRef(null);
+
+  // Canonical user id — used for appointment scoping (client_id / doctor_id)
+  const myUserId = userProfile?.id || user?.id || user?.uid;
+  const isDoctor = userProfile?.user_type === 'doctor' || userProfile?.userType === 'doctor';
+  const userType = isDoctor ? 'doctor' : 'Client';
 
   useEffect(() => {
     if (user && !userLoading) {
       loadTelemedicineData();
-      setupAgoraEventListeners();
-      loadAvailableDevices();
     }
-    
-    return () => {
-      // Cleanup on unmount
-      if (isInCall) {
-        telemedicineService.leaveChannel();
-      }
-      // Clear any active timer
-      if (callTimerRef.current) {
-        clearInterval(callTimerRef.current);
-        callTimerRef.current = null;
-      }
-      // Remove Agora event listeners
-      removeAgoraEventListeners();
-    };
   }, [user, userLoading]);
-
-  const loadAvailableDevices = async () => {
-    try {
-      const devices = await telemedicineService.getAvailableDevices();
-      setAvailableDevices(devices);
-    } catch (error) {
-      console.error('Failed to load devices:', error);
-    }
-  };
-
-  // Set up Agora event listeners
-  const agoraEventHandlers = {};
-
-  const setupAgoraEventListeners = () => {
-    // User joined
-    agoraEventHandlers['agora-user-published'] = (event) => {
-      const { user } = event.detail;
-      setRemoteUsers(prev => [...prev, user]);
-      toast.success(`${user.uid} joined the call`);
-    };
-
-    // User left
-    agoraEventHandlers['agora-user-left'] = (event) => {
-      const { user } = event.detail;
-      setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
-      toast.info(`${user.uid} left the call`);
-    };
-
-    // Connection state changed
-    agoraEventHandlers['agora-connection-state-change'] = (event) => {
-      const { curState } = event.detail;
-      setConnectionState(curState);
-      console.log('Connection state:', curState);
-      
-      if (curState === 'CONNECTED') {
-        toast.success('Connected to call');
-      } else if (curState === 'DISCONNECTED') {
-        toast.warning('Connection lost');
-        // Clean up call state on unexpected disconnect
-        if (callTimerRef.current) {
-          clearInterval(callTimerRef.current);
-          callTimerRef.current = null;
-        }
-        setIsInCall(false);
-        setActiveCall(null);
-        setCallDuration(0);
-        setRemoteUsers([]);
-        setIsVideoOn(true);
-        setIsAudioOn(true);
-        setIsRecording(false);
-      }
-    };
-
-    // Error handling
-    agoraEventHandlers['agora-error'] = (event) => {
-      const { type, error } = event.detail;
-      setError(error);
-      console.error('Agora error:', type, error);
-      
-      switch (type) {
-        case 'initialization':
-          toast.error('Failed to initialize video calling');
-          break;
-        case 'join':
-          if (event.detail.isTokenError) {
-            toast.error('Video call authentication failed. Please try again.');
-          } else {
-            toast.error('Failed to join call. Please check your connection.');
-          }
-          break;
-        case 'track-creation':
-          toast.error('Failed to access camera/microphone');
-          break;
-        case 'publish':
-          toast.error('Failed to start video/audio');
-          break;
-        default:
-          toast.error('Video call error occurred');
-      }
-    };
-
-    // Tracks created
-    agoraEventHandlers['agora-tracks-created'] = (event) => {
-      const { hasVideo, hasAudio } = event.detail;
-      setIsVideoOn(hasVideo);
-      setIsAudioOn(hasAudio);
-      
-      if (!hasVideo && !hasAudio) {
-        toast.warning('No camera or microphone access available');
-      } else if (!hasVideo) {
-        toast.warning('Camera access not available - audio only');
-      } else if (!hasAudio) {
-        toast.warning('Microphone access not available - video only');
-      }
-    };
-
-    // Recording events
-    agoraEventHandlers['agora-recording-started'] = (event) => {
-      setIsRecording(true);
-      toast.success('Recording started');
-    };
-
-    agoraEventHandlers['agora-recording-stopped'] = (event) => {
-      setIsRecording(false);
-      toast.success('Recording stopped');
-    };
-
-    // Register all listeners
-    Object.entries(agoraEventHandlers).forEach(([event, handler]) => {
-      window.addEventListener(event, handler);
-    });
-  };
-
-  const removeAgoraEventListeners = () => {
-    Object.entries(agoraEventHandlers).forEach(([event, handler]) => {
-      window.removeEventListener(event, handler);
-    });
-  };
 
   const loadTelemedicineData = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      if (!user) {
+
+      if (!myUserId) {
         setLoading(false);
         return;
       }
 
-      // Determine user type based on user data
-      const currentUserType = user.displayName?.includes('Dr.') ? 'doctor' : 'Client';
-      setUserType(currentUserType);
-
       // Load appointments from Backend
-      const appointmentsData = await telemedicineAPI.getAppointments(user.uid, currentUserType);
-      
+      const appointmentsData = await telemedicineAPI.getAppointments(myUserId, userType);
+
       // Format appointments for display
-      const formattedAppointments = appointmentsData.map(appointment => 
+      const formattedAppointments = appointmentsData.map(appointment =>
         telemedicineAPI.formatAppointmentForDisplay(appointment)
       );
 
@@ -233,204 +75,54 @@ const Telemedicine = () => {
       console.error('Error loading telemedicine data:', error);
       setError('Failed to load appointments. Please try again.');
       setLoading(false);
-      
-      // No fallback - use empty data if Backend fails
       setAppointments([]);
-      setLoading(false);
     }
   };
 
 
+  // Open the WebRTC consultation call for a scheduled appointment.
+  // Both parties join the deterministic channel consult_<appointmentId>.
   const startCall = async (appointment) => {
+    setActiveCall(appointment);
+    // Record the call session (marks the appointment in-progress)
     try {
-      setIsInitializing(true);
-      setError(null);
-      setActiveCall(appointment);
-      setIsInCall(true);
-      setCallDuration(0);
-      
-      // Generate a unique channel name for this appointment
-      const channelName = `appointment_${appointment.id}_${Date.now()}`;
-      
-      // Join Agora channel
-      const uid = await telemedicineService.joinChannel(null, channelName);
-      console.log('Joined call with UID:', uid);
-      
-      // Save call data to Backend
-      let callId = null;
+      const callResult = await telemedicineAPI.startCall(appointment.id, {
+        clientId: isDoctor ? appointment.clientId : myUserId,
+        doctorId: isDoctor ? myUserId : appointment.doctorId,
+        channelName: `consult_${appointment.id}`,
+        callType: appointment.type || 'video',
+        status: 'active'
+      });
+      setActiveCall(prev => prev && prev.id === appointment.id
+        ? { ...prev, callId: callResult.id }
+        : prev);
+    } catch (backendError) {
+      console.warn('Failed to save call to Backend:', backendError);
+      // Continue with call even if Backend save fails
+    }
+  };
+
+  // Called by ConsultationCall when either side ends the call
+  const handleCallEnded = async (durationSeconds) => {
+    const ended = activeCall;
+    setActiveCall(null);
+
+    if (ended?.callId) {
       try {
-        const callData = {
-          appointmentId: appointment.id,
-          clientId: userType === 'Client' ? user.uid : appointment.clientId,
-          doctorId: userType === 'doctor' ? user.uid : appointment.doctorId,
-          channelName,
-          uid,
-          callType: appointment.type || 'video',
-          status: 'active'
-        };
-        
-        const callResult = await telemedicineAPI.startCall(appointment.id, callData);
-        callId = callResult.id;
-        
-        // Update active call with Backend call ID
-        setActiveCall(prev => ({ ...prev, callId }));
+        await telemedicineAPI.endCall(ended.callId, {
+          duration: durationSeconds || 0,
+          endReason: 'user_ended'
+        });
       } catch (backendError) {
-        console.warn('Failed to save call to Backend:', backendError);
-        // Continue with call even if Backend save fails
+        console.warn('Failed to save call end to Backend:', backendError);
+        // Still mark the appointment completed locally
+        telemedicineAPI.updateAppointmentStatus(ended.id, 'completed').catch(() => {});
       }
-      
-      toast.success('Call started successfully!');
-      
-      // Start call duration timer
-      const timer = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
-      
-      // Store timer for cleanup
-      callTimerRef.current = timer;
-      setActiveCall(prev => ({ ...prev, timer, channelName, uid, callId }));
-      
-    } catch (error) {
-      console.error('Failed to start call:', error);
-      setError(error.message);
-      toast.error(`Failed to start call: ${error.message}`);
-      setActiveCall(null);
-      setIsInCall(false);
-    } finally {
-      setIsInitializing(false);
+    } else if (ended?.id) {
+      telemedicineAPI.updateAppointmentStatus(ended.id, 'completed').catch(() => {});
     }
-  };
 
-  const endCall = async () => {
-    try {
-      // Clear timer
-      if (callTimerRef.current) {
-        clearInterval(callTimerRef.current);
-        callTimerRef.current = null;
-      }
-      
-      // Leave Agora channel
-      await telemedicineService.leaveChannel();
-      
-      // Save call end data to Backend
-      if (activeCall?.callId) {
-        try {
-          const callEndData = {
-            duration: callDuration,
-            endReason: 'user_ended',
-            hasRecording: isRecording
-          };
-          
-          await telemedicineAPI.endCall(activeCall.callId, callEndData);
-        } catch (backendError) {
-          console.warn('Failed to save call end to Backend:', backendError);
-        }
-      }
-      
-      setActiveCall(null);
-      setIsInCall(false);
-      setCallDuration(0);
-      setRemoteUsers([]);
-      setIsVideoOn(true);
-      setIsAudioOn(true);
-      setIsRecording(false);
-      
-      toast.success('Call ended successfully!');
-    } catch (error) {
-      console.error('Failed to end call:', error);
-      toast.error('Failed to end call properly.');
-    }
-  };
-
-  const toggleVideo = async () => {
-    try {
-      const enabled = await telemedicineService.toggleVideo();
-      setIsVideoOn(enabled);
-      toast.info(enabled ? 'Video enabled' : 'Video disabled');
-    } catch (error) {
-      console.error('Failed to toggle video:', error);
-      toast.error('Failed to toggle video');
-    }
-  };
-
-  const toggleAudio = async () => {
-    try {
-      const enabled = await telemedicineService.toggleAudio();
-      setIsAudioOn(enabled);
-      toast.info(enabled ? 'Audio enabled' : 'Audio disabled');
-    } catch (error) {
-      console.error('Failed to toggle audio:', error);
-      toast.error('Failed to toggle audio');
-    }
-  };
-
-  const toggleRecording = async () => {
-    try {
-      if (isRecording) {
-        await telemedicineService.stopRecording();
-        setIsRecording(false);
-        
-        // Save recording data to Backend
-        if (activeCall?.callId) {
-          try {
-            const recordingData = {
-              duration: callDuration,
-              status: 'completed',
-              recordingUrl: null, // Would be set by Agora Cloud Recording
-              fileSize: null
-            };
-            
-            await telemedicineAPI.saveRecording(activeCall.callId, recordingData);
-          } catch (backendError) {
-            console.warn('Failed to save recording data to Backend:', backendError);
-          }
-        }
-        
-        toast.success('Recording stopped');
-      } else {
-        await telemedicineService.startRecording();
-        setIsRecording(true);
-        
-        // Save recording start data to Backend
-        if (activeCall?.callId) {
-          try {
-            const recordingData = {
-              status: 'recording',
-              startTime: new Date()
-            };
-            
-            await telemedicineAPI.saveRecording(activeCall.callId, recordingData);
-          } catch (backendError) {
-            console.warn('Failed to save recording start to Backend:', backendError);
-          }
-        }
-        
-        toast.success('Recording started');
-      }
-    } catch (error) {
-      console.error('Failed to toggle recording:', error);
-      toast.error('Failed to toggle recording');
-    }
-  };
-
-  const switchCamera = async (deviceId) => {
-    try {
-      await telemedicineService.switchCamera(deviceId);
-      toast.success('Camera switched successfully');
-    } catch (error) {
-      console.error('Failed to switch camera:', error);
-      toast.error('Failed to switch camera');
-    }
-  };
-
-  const switchMicrophone = async (deviceId) => {
-    try {
-      await telemedicineService.switchMicrophone(deviceId);
-      toast.success('Microphone switched successfully');
-    } catch (error) {
-      console.error('Failed to switch microphone:', error);
-      toast.error('Failed to switch microphone');
-    }
+    loadTelemedicineData();
   };
 
   const openRequestModal = () => {
@@ -462,8 +154,8 @@ const Telemedicine = () => {
     setSubmittingRequest(true);
     try {
       const requestData = {
-        clientId: user.uid,
-        clientName: user.displayName || user.email || 'Client',
+        clientId: myUserId,
+        clientName: userProfile?.name || user.displayName || user.email || 'Client',
         reason: requestForm.reason,
         notes: requestForm.notes,
         urgency: requestForm.urgency,
@@ -474,7 +166,7 @@ const Telemedicine = () => {
           : null,
         duration: 30,
         requestedAt: new Date().toISOString(),
-        requestedBy: user.uid
+        requestedBy: myUserId
       };
 
       await telemedicineAPI.requestConsultation(requestData);
@@ -585,271 +277,35 @@ const Telemedicine = () => {
           <p className="text-gray-600">Virtual consultations and remote healthcare</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button 
-            onClick={openRequestModal}
-            className="btn btn-primary"
-            title="Request a new video consultation"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Request Video Consultation
-          </button>
-          <button 
-            onClick={loadAvailableDevices}
-            className="btn btn-secondary"
-            title="Refresh device list"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Refresh Devices
-          </button>
+          {!isDoctor && (
+            <button
+              onClick={openRequestModal}
+              className="btn btn-primary"
+              title="Request a new video consultation"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Request Video Consultation
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Device Status */}
-      {availableDevices.cameras.length > 0 || availableDevices.microphones.length > 0 ? (
+      {/* Error Display */}
+      {error && (
         <div className="card">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-900">Available Devices</h3>
-            <span className="text-xs text-gray-500">
-              {availableDevices.cameras.length} camera(s), {availableDevices.microphones.length} microphone(s)
-            </span>
-          </div>
-        </div>
-      ) : (
-        <div className="card">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
-              <div>
-                <h3 className="text-sm font-medium text-yellow-800">No Devices Detected</h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Please ensure your camera and microphone are connected and permissions are granted.
-                </p>
-              </div>
-            </div>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         </div>
       )}
 
-      {/* Connection Status & Error Display */}
-      {(error || connectionState !== 'disconnected') && (
-        <div className="card">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-                <div>
-                  <h3 className="text-sm font-medium text-red-800">Connection Error</h3>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {connectionState !== 'disconnected' && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className={`w-3 h-3 rounded-full mr-2 ${
-                  connectionState === 'CONNECTED' ? 'bg-green-500' : 
-                  connectionState === 'CONNECTING' ? 'bg-yellow-500' : 
-                  'bg-red-500'
-                }`}></div>
-                <span className="text-sm text-gray-600">
-                  Status: {connectionState.toLowerCase()}
-                </span>
-              </div>
-              {isInitializing && (
-                <div className="flex items-center text-sm text-gray-500">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                  Initializing...
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Active Call Interface */}
+      {/* Active Consultation Call — WebRTC overlay */}
       {activeCall && (
-        <div className="card bg-gray-900 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
-                <span className="text-white font-medium">
-                  {activeCall.doctorName ? activeCall.doctorName.split(' ').map(n => n[0]).join('') : 'DC'}
-                </span>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">{activeCall.doctorName || 'Doctor'}</h3>
-                <p className="text-gray-300">{activeCall.doctorSpecialty}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-300">Call Duration: {formatDuration(callDuration)}</span>
-              {isRecording && (
-                <div className="flex items-center space-x-1 bg-red-600 px-2 py-1 rounded-full">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  <span className="text-xs text-white">REC</span>
-                </div>
-              )}
-              <button
-                onClick={endCall}
-                className="p-2 bg-red-600 rounded-full hover:bg-red-700"
-                title="End call"
-              >
-                <PhoneOff className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Video/Audio Interface */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Remote Users Video */}
-            <div className="bg-gray-800 rounded-lg p-4">
-              <div className="aspect-video bg-gray-700 rounded-lg mb-4 relative overflow-hidden">
-                {remoteUsers.length > 0 ? (
-                  remoteUsers.map((user, index) => (
-                    <div
-                      key={user.uid}
-                      id={`remote-video-${user.uid}`}
-                      className="w-full h-full"
-                    />
-                  ))
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <Camera className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-400">Waiting for doctor to join...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">
-                  {remoteUsers.length > 0 ? `${remoteUsers.length} participant(s)` : 'No participants'}
-                </span>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={toggleVideo}
-                    className={`p-2 rounded-full ${isVideoOn ? 'bg-gray-700' : 'bg-red-600'}`}
-                  >
-                    {isVideoOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-                  </button>
-                  <button
-                    onClick={toggleAudio}
-                    className={`p-2 rounded-full ${isAudioOn ? 'bg-gray-700' : 'bg-red-600'}`}
-                  >
-                    {isAudioOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Local Video */}
-            <div className="bg-gray-800 rounded-lg p-4">
-              <div className="aspect-video bg-gray-700 rounded-lg mb-4 relative overflow-hidden">
-                <div
-                  id="local-video"
-                  className="w-full h-full"
-                />
-                {!isVideoOn && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-600">
-                    <div className="text-center">
-                      <VideoOff className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-400">Your video is off</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">You</span>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={toggleVideo}
-                    className={`p-2 rounded-full ${isVideoOn ? 'bg-gray-700' : 'bg-red-600'}`}
-                  >
-                    {isVideoOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-                  </button>
-                  <button
-                    onClick={toggleAudio}
-                    className={`p-2 rounded-full ${isAudioOn ? 'bg-gray-700' : 'bg-red-600'}`}
-                  >
-                    {isAudioOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Call Controls */}
-          <div className="space-y-4">
-            {/* Main Controls */}
-            <div className="flex items-center justify-center space-x-4">
-              <button
-                onClick={toggleVideo}
-                className={`p-3 rounded-full transition-colors ${isVideoOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'}`}
-                title={isVideoOn ? 'Turn off video' : 'Turn on video'}
-              >
-                {isVideoOn ? <Video className="h-6 w-6" /> : <VideoOff className="h-6 w-6" />}
-              </button>
-              <button
-                onClick={toggleAudio}
-                className={`p-3 rounded-full transition-colors ${isAudioOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'}`}
-                title={isAudioOn ? 'Mute microphone' : 'Unmute microphone'}
-              >
-                {isAudioOn ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
-              </button>
-              <button
-                onClick={toggleRecording}
-                className={`p-3 rounded-full transition-colors ${isRecording ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-700 hover:bg-gray-600'}`}
-                title={isRecording ? 'Stop recording' : 'Start recording'}
-              >
-                {isRecording ? <StopCircle className="h-6 w-6" /> : <Circle className="h-6 w-6" />}
-              </button>
-              <button className="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors" title="Share screen">
-                <Share className="h-6 w-6" />
-              </button>
-              <button className="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors" title="Settings">
-                <Settings className="h-6 w-6" />
-              </button>
-            </div>
-
-            {/* Device Selection */}
-            {(availableDevices.cameras.length > 1 || availableDevices.microphones.length > 1) && (
-              <div className="flex items-center justify-center space-x-4 text-sm">
-                {availableDevices.cameras.length > 1 && (
-                  <div className="flex items-center space-x-2">
-                    <Camera className="h-4 w-4" />
-                    <select 
-                      onChange={(e) => switchCamera(e.target.value)}
-                      className="bg-gray-800 text-white rounded px-2 py-1 text-xs"
-                    >
-                      {availableDevices.cameras.map((camera) => (
-                        <option key={camera.deviceId} value={camera.deviceId}>
-                          {camera.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {availableDevices.microphones.length > 1 && (
-                  <div className="flex items-center space-x-2">
-                    <Mic className="h-4 w-4" />
-                    <select 
-                      onChange={(e) => switchMicrophone(e.target.value)}
-                      className="bg-gray-800 text-white rounded px-2 py-1 text-xs"
-                    >
-                      {availableDevices.microphones.map((mic) => (
-                        <option key={mic.deviceId} value={mic.deviceId}>
-                          {mic.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        <ConsultationCall
+          appointment={activeCall}
+          role={isDoctor ? 'doctor' : 'client'}
+          onEnd={handleCallEnded}
+        />
       )}
 
       {/* Upcoming Appointments & Requests */}
@@ -858,7 +314,7 @@ const Telemedicine = () => {
           <h2 className="text-lg font-semibold text-gray-900">My Video Consultations</h2>
         </div>
         <div className="space-y-4">
-          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled').sort((a, b) => {
+          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled' || apt.status === 'in-progress').sort((a, b) => {
             const aTime = a.appointmentDate ? new Date(a.appointmentDate).getTime() : 0;
             const bTime = b.appointmentDate ? new Date(b.appointmentDate).getTime() : 0;
             return aTime - bTime;
@@ -908,23 +364,13 @@ const Telemedicine = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {appointment.status === 'scheduled' ? (
+                  {appointment.status === 'scheduled' || appointment.status === 'in-progress' ? (
                     <button
                       onClick={() => startCall(appointment)}
-                      disabled={isInitializing}
-                      className={`btn btn-primary ${isInitializing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className="btn btn-primary"
                     >
-                      {isInitializing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Starting...
-                        </>
-                      ) : (
-                        <>
-                          {appointment.type === 'video' ? <Video className="h-4 w-4 mr-2" /> : <Phone className="h-4 w-4 mr-2" />}
-                          Start Call
-                        </>
-                      )}
+                      {appointment.type === 'video' ? <Video className="h-4 w-4 mr-2" /> : <Phone className="h-4 w-4 mr-2" />}
+                      Join Call
                     </button>
                   ) : (
                     <button
@@ -940,7 +386,7 @@ const Telemedicine = () => {
               </div>
             </div>
           ))}
-          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled').length === 0 && (
+          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled' || apt.status === 'in-progress').length === 0 && (
             <div className="text-center py-8 text-gray-500">
               No video consultations or requests yet.
             </div>

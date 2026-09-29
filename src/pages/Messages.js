@@ -15,11 +15,15 @@ import {
   X
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { getConversationsByUser, getMessagesByConversation, sendMessage, getOrCreateConversation } from '../api/messagesAPI';
+import { sendMessage, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages, markConversationAsRead } from '../api/messagesAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { toast } from 'react-toastify';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
+import WebRTCService from '../services/webrtcService';
+import { buildConstraints } from '../services/deviceSettingsService';
+import { collection, query, where, onSnapshot } from 'backend/database';
+import { db } from '../backend/config';
 
 const Messages = () => {
   const { user, userProfile } = useUser();
@@ -38,6 +42,13 @@ const Messages = () => {
   const [callService] = useState(() => new CallService());
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
+  const [webrtc, setWebrtc] = useState(null);
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [callConnectionState, setCallConnectionState] = useState(null);
+  const signalingUnsubRef = useRef(null);
+  const callStatusUnsubRef = useRef(null);
+  const callTimeoutRef = useRef(null);
 
   // New chat dialog
   const [showNewChat, setShowNewChat] = useState(false);
@@ -46,27 +57,27 @@ const Messages = () => {
 
   const messagesEndRef = useRef(null);
 
+  // Canonical account id — conversations.participants stores users.id
+  const myId = userProfile?.id || user?.uid;
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Realtime conversation list (poll-based shim)
   useEffect(() => {
-    if (!user?.uid) {
+    if (!myId) {
       setLoading(false);
       return;
     }
     setLoading(true);
-    getConversationsByUser(user.uid)
-      .then(data => {
-        setConversations(data || []);
-        setFilteredConversations(data || []);
-      })
-      .catch(err => {
-        console.error('Error loading conversations:', err);
-        toast.error('Could not load conversations');
-      })
-      .finally(() => setLoading(false));
-  }, [user?.uid]);
+    const unsubscribe = subscribeToUserConversations(myId, (data) => {
+      setConversations(data || []);
+      setFilteredConversations(data || []);
+      setLoading(false);
+    });
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [myId]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -85,46 +96,42 @@ const Messages = () => {
     }
   }, [searchTerm, conversations]);
 
-  const handleSelectChat = async (conversation) => {
+  const handleSelectChat = (conversation) => {
     setSelectedChat(conversation);
-    if (conversation?.id) {
-      try {
-        const msgs = await getMessagesByConversation(conversation.id);
-        setMessages(msgs || []);
-      } catch (err) {
-        console.error('Error loading messages:', err);
-        toast.error('Could not load messages');
-        setMessages([]);
-      }
+    if (conversation?.id && myId) {
+      markConversationAsRead(conversation.id, myId).catch(() => {});
     }
   };
 
+  // Live message feed for the open conversation
+  useEffect(() => {
+    if (!selectedChat?.id) {
+      setMessages([]);
+      return;
+    }
+    setMessages([]);
+    const unsubscribe = subscribeToConversationMessages(selectedChat.id, (msgs) => {
+      setMessages(msgs || []);
+    });
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [selectedChat?.id]);
+
   // ─── Call functionality ───
 
-  // Get the other participant's ID from the selected chat
-  const getOtherParticipantId = () => {
-    if (!selectedChat || !user?.uid) return null;
-    const participants = selectedChat.participants || [];
-    // Find a participant that isn't the current user
-    const other = participants.find(p => {
-      const pid = typeof p === 'object' ? (p?.id || p?.uid) : p;
-      return pid && pid !== user.uid;
-    });
-    if (other) return typeof other === 'object' ? (other?.id || other?.uid) : other;
-    // Fallback: use receiverId/senderId from conversation
-    return selectedChat.receiverId || selectedChat.senderId || null;
+  // Other participant's details — participant_details is denormalized on the
+  // row by the backend ([{id, name, role}]); raw participants are id strings.
+  const getOtherParticipant = (conv = selectedChat) => {
+    if (!conv || !myId) return null;
+    const details = Array.isArray(conv.participantDetails) ? conv.participantDetails : [];
+    const other = details.find(p => String(p.id) !== String(myId));
+    if (other) return other;
+    const rawId = (conv.participants || []).find(p => String(p) !== String(myId));
+    return rawId ? { id: rawId, name: conv.title || 'Participant', role: '' } : null;
   };
 
-  const getOtherParticipantName = () => {
-    if (!selectedChat) return 'Participant';
-    const participants = selectedChat.participants || [];
-    const other = participants.find(p => {
-      const pid = typeof p === 'object' ? (p?.id || p?.uid) : p;
-      return pid && pid !== user?.uid;
-    });
-    if (other) return typeof other === 'object' ? (other?.name || other?.displayName || 'Participant') : 'Participant';
-    return selectedChat.conversationType || 'Participant';
-  };
+  const getOtherParticipantId = () => getOtherParticipant()?.id || null;
+  const getOtherParticipantName = () => getOtherParticipant()?.name || 'Participant';
+  const getOtherParticipantRole = () => getOtherParticipant()?.role || '';
 
   // Listen for incoming calls
   useEffect(() => {
@@ -139,13 +146,52 @@ const Messages = () => {
           callerName: callNotification.callerName || 'Caller',
           callType: callNotification.callType || 'video',
         });
+      } else if (
+        // Reject/end notifications are new rows addressed to the caller — the
+        // polling shim never reports row *updates*, so this is how the caller
+        // learns the other side rejected or hung up.
+        (callNotification.status === 'rejected' || callNotification.status === 'ended') &&
+        activeCall && callNotification.callId === activeCall.callId
+      ) {
+        toast.info(callNotification.status === 'rejected' ? 'Call was rejected' : 'Call ended');
+        cleanupCall();
+        setActiveCall(null);
       }
     });
 
     return () => { if (unsubscribe) unsubscribe(); };
-  }, [userProfile, user, callService]);
+  }, [userProfile, user, callService, activeCall]);
 
-  // Initiate an outgoing call
+  // Shared WebRTC callback wiring for both call directions
+  const setupWebrtcCallbacks = (svc) => {
+    svc.setCallbacks({
+      onLocalStream: (stream) => setLocalStream(stream),
+      onRemoteStream: (stream) => {
+        setRemoteStream(stream);
+        setCallConnectionState('connected');
+      },
+      onCallEnded: () => cleanupCall(),
+      onCallStateChange: (state) => {
+        if (state === 'connected') {
+          setCallConnectionState('connected');
+        } else if (state === 'failed' || state === 'closed' || state === 'disconnected') {
+          setCallConnectionState('ended');
+        }
+      },
+    });
+  };
+
+  const cleanupCall = () => {
+    if (signalingUnsubRef.current) { signalingUnsubRef.current(); signalingUnsubRef.current = null; }
+    if (callStatusUnsubRef.current) { callStatusUnsubRef.current(); callStatusUnsubRef.current = null; }
+    if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); setLocalStream(null); }
+    if (remoteStream) { remoteStream.getTracks().forEach(t => t.stop()); setRemoteStream(null); }
+    if (webrtc) { webrtc.endCall().catch(() => {}); setWebrtc(null); }
+    setCallConnectionState(null);
+  };
+
+  // Initiate an outgoing call — call record + notification + WebRTC offer
   const handleStartCall = async (callType = 'video') => {
     const recipientId = getOtherParticipantId();
     if (!recipientId) {
@@ -153,11 +199,12 @@ const Messages = () => {
       return;
     }
 
-    const callerId = userProfile?.id || userProfile?.uid || user?.uid;
+    const callerId = myId;
     const callerName = userProfile?.name || userProfile?.displayName || 'Client';
     const recipientName = getOtherParticipantName();
 
     try {
+      // 1. Call record + notification to the recipient
       const result = await callService.initiateCall({
         callerId,
         recipientId,
@@ -166,6 +213,42 @@ const Messages = () => {
         recipientName,
       });
 
+      // 2. WebRTC peer + media + offer over the signaling channel
+      const svc = new WebRTCService();
+      await svc.initialize();
+      setupWebrtcCallbacks(svc);
+      svc.callId = result.callId;
+      svc.isInitiator = true;
+      await svc.getUserMedia(buildConstraints(callType));
+      const offer = await svc.peerConnection.createOffer();
+      await svc.peerConnection.setLocalDescription(offer);
+      await svc.sendSignalingMessage('offer', { offer, callType });
+
+      // 3. Listen for the answer + ICE candidates
+      signalingUnsubRef.current = svc.listenForSignaling(result.callId, async (msg) => {
+        try {
+          if (msg.type === 'answer') {
+            // Clear the ring timeout — the callee picked up
+            if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
+            await svc.handleAnswer(msg.data.answer);
+          }
+          else if (msg.type === 'ice-candidate') await svc.handleIceCandidate(msg.data.candidate);
+          else if (msg.type === 'reject') { toast.info(`${recipientName} rejected the call`); cleanupCall(); setActiveCall(null); }
+        } catch (e) { console.error('Signaling handler error:', e); }
+      });
+
+      // (The calls-row status watcher was removed — the polling shim only
+      // reports new docs via docChanges(), so row updates never fire.
+      // Reject/end reach the caller through callNotifications instead.)
+
+      // 5. Ring timeout
+      callTimeoutRef.current = setTimeout(() => {
+        toast.info(`${recipientName} did not answer`);
+        cleanupCall();
+        setActiveCall(null);
+      }, 45000);
+
+      setWebrtc(svc);
       setActiveCall({
         callId: result.callId,
         participantId: recipientId,
@@ -175,15 +258,30 @@ const Messages = () => {
     } catch (error) {
       console.error('Error starting call:', error);
       toast.error('Failed to start call. Please try again.');
+      cleanupCall();
     }
   };
 
-  // Accept an incoming call
+  // Accept an incoming call — answer + signaling listener
   const handleAcceptCall = async () => {
     if (!incomingCall) return;
     try {
-      const userId = userProfile?.id || userProfile?.uid || user?.uid;
+      const userId = myId;
       await callService.answerCall(incomingCall.callId, userId);
+
+      const svc = new WebRTCService();
+      await svc.initialize();
+      setupWebrtcCallbacks(svc);
+      await svc.answerCall(incomingCall.callId, incomingCall.callType);
+
+      signalingUnsubRef.current = svc.listenForSignaling(incomingCall.callId, async (msg) => {
+        try {
+          if (msg.type === 'offer') await svc.handleOffer(msg.data.offer, incomingCall.callType);
+          else if (msg.type === 'ice-candidate') await svc.handleIceCandidate(msg.data.candidate);
+        } catch (e) { console.error('Signaling handler error:', e); }
+      });
+
+      setWebrtc(svc);
       setActiveCall({
         callId: incomingCall.callId,
         participantId: incomingCall.callerId,
@@ -194,6 +292,7 @@ const Messages = () => {
     } catch (error) {
       console.error('Error accepting call:', error);
       toast.error('Failed to accept call');
+      cleanupCall();
     }
   };
 
@@ -201,7 +300,7 @@ const Messages = () => {
   const handleRejectCall = async () => {
     if (!incomingCall) return;
     try {
-      const userId = userProfile?.id || userProfile?.uid || user?.uid;
+      const userId = myId;
       await callService.rejectCall(incomingCall.callId, userId);
       setIncomingCall(null);
       toast.info('Call rejected');
@@ -215,13 +314,15 @@ const Messages = () => {
   const handleEndCall = async () => {
     if (!activeCall) return;
     try {
-      await callService.endCall(activeCall.callId);
-      setActiveCall(null);
-      toast.info('Call ended');
+      await callService.endCall(activeCall.callId, 0);
     } catch (error) {
       console.error('Error ending call:', error);
-      setActiveCall(null);
     }
+    callService.cleanupSignalingRecords(activeCall.callId).catch(() => {});
+    callService.cleanupCallNotifications(activeCall.callId).catch(() => {});
+    cleanupCall();
+    setActiveCall(null);
+    toast.info('Call ended');
   };
 
   // ─── New chat functionality ───
@@ -236,16 +337,21 @@ const Messages = () => {
 
     setLoadingCaregivers(true);
     try {
-      // Backend scopes results to the authenticated patient/client
+      // Backend scopes results to the authenticated patient/client.
+      // Assignments link any staff role (caregiver/nurse/doctor) via caregiver_id.
       const assignments = await assignmentAPI.getAssignmentsByClient();
-      // Extract unique caregiver IDs and names
+      const seen = new Set();
       const caregivers = (assignments || [])
         .map(a => ({
           id: a.caregiverId || a.caregiver_id,
-          name: a.caregiverName || a.caregiver_name || 'Caregiver',
-          role: a.caregiverRole || a.role || 'Caregiver',
+          name: a.caregiverName || a.caregiver_name || 'Staff Member',
+          role: a.assignedToRole || a.assigned_to_role || a.caregiverRole || a.role || 'caregiver',
         }))
-        .filter(c => c.id && c.id !== patientId);
+        .filter(c => {
+          if (!c.id || c.id === patientId || seen.has(c.id)) return false;
+          seen.add(c.id);
+          return true;
+        });
       setAssignedCaregivers(caregivers);
     } catch (err) {
       console.error('Error loading caregivers:', err);
@@ -266,10 +372,13 @@ const Messages = () => {
       const newConv = {
         id: conversation.id,
         participants: [clientId, caregiver.id],
+        participantDetails: [
+          { id: clientId, name: userProfile?.name || 'Me', role: 'client' },
+          { id: caregiver.id, name: caregiver.name, role: caregiver.role },
+        ],
         conversationType: 'general',
         lastMessage: '',
         lastMessageTime: new Date(),
-        caregiverName: caregiver.name,
       };
       setConversations(prev => [newConv, ...prev]);
       setFilteredConversations(prev => [newConv, ...prev]);
@@ -284,26 +393,18 @@ const Messages = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!user?.uid || !newMessage.trim() || !selectedChat) return;
+    if (!myId || !newMessage.trim() || !selectedChat) return;
     try {
-      await sendMessage(selectedChat.id, user.uid, { text: newMessage });
+      await sendMessage(selectedChat.id, myId, { text: newMessage });
       const message = {
-        id: Date.now(),
+        id: `local-${Date.now()}`,
         text: newMessage,
-        senderId: user.uid,
-        senderName: userProfile?.name || 'Client',
+        senderId: myId,
+        senderName: userProfile?.name || 'Me',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, message]);
       setNewMessage('');
-      // Reload conversations to update lastMessage
-      try {
-        const updatedConvs = await getConversationsByUser(user.uid);
-        setConversations(updatedConvs || []);
-        setFilteredConversations(updatedConvs || []);
-      } catch (refreshErr) {
-        console.error('Error refreshing conversations:', refreshErr);
-      }
     } catch (err) {
       toast.error('Failed to send message');
     }
@@ -321,7 +422,7 @@ const Messages = () => {
   };
 
   const getReadStatus = (message) => {
-    if (message.senderId === user?.uid) {
+    if (message.senderId === myId) {
       return message.read ? <CheckCheck className="h-4 w-4 text-blue-500" /> : <Check className="h-4 w-4 text-gray-400" />;
     }
     return null;
@@ -379,10 +480,10 @@ const Messages = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">{conversation.conversationType || 'Conversation'}</h3>
-                    <span className="text-xs text-gray-500">{conversation.lastMessageTime || ''}</span>
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{getOtherParticipant(conversation)?.name || conversation.title || 'Conversation'}</h3>
+                    <span className="text-xs text-gray-500">{conversation.lastMessageTime ? new Date(conversation.lastMessageTime).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mb-1">{conversation.conversationType || ''}</p>
+                  <p className="text-xs text-gray-500 mb-1 capitalize">{getOtherParticipant(conversation)?.role || ''}</p>
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-gray-600 truncate">{conversation.lastMessage}</p>
                     {conversation.unreadCount > 0 && (
@@ -414,8 +515,8 @@ const Messages = () => {
                     <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(selectedChat.status)}`}></div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{selectedChat.conversationType || 'Conversation'}</h3>
-                    <p className="text-sm text-gray-500">{selectedChat.conversationType || ''}</p>
+                    <h3 className="text-lg font-semibold text-gray-900">{getOtherParticipantName()}</h3>
+                    <p className="text-sm text-gray-500 capitalize">{getOtherParticipantRole()}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -445,20 +546,24 @@ const Messages = () => {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.senderId === myId ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    message.senderId === user?.uid
+                    message.senderId === myId
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-900'
                   }`}>
-                    <p className="text-sm">{message.text}</p>
+                    {message.senderId !== myId && (
+                      <p className="text-xs font-medium text-gray-500 mb-0.5">{getOtherParticipantName()}</p>
+                    )}
+                    <p className="text-sm">{message.text || message.content}</p>
                     <div className={`flex items-center justify-between mt-1 ${
-                      message.senderId === user?.uid ? 'text-blue-100' : 'text-gray-500'
+                      message.senderId === myId ? 'text-blue-100' : 'text-gray-500'
                     }`}>
                       <span className="text-xs">{(() => {
                         const ts = message.createdAt || message.timestamp;
-                        return ts instanceof Date ? ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (ts || '');
+                        const d = ts instanceof Date ? ts : new Date(ts);
+                        return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                       })()}</span>
                       {getReadStatus(message)}
                     </div>
@@ -511,14 +616,15 @@ const Messages = () => {
         <CallInterface
           isOpen={!!incomingCall}
           onClose={handleRejectCall}
+          callId={incomingCall.callId}
           callType={incomingCall.callType}
           participantInfo={{
             id: incomingCall.callerId,
             name: incomingCall.callerName || 'Caller',
           }}
           isIncoming={true}
-          onAccept={handleAcceptCall}
-          onReject={handleRejectCall}
+          onCallAccepted={handleAcceptCall}
+          onCallRejected={handleRejectCall}
         />
       )}
 
@@ -527,13 +633,17 @@ const Messages = () => {
         <CallInterface
           isOpen={!!activeCall}
           onClose={handleEndCall}
+          callId={activeCall.callId}
           callType={activeCall.callType}
           participantInfo={{
             id: activeCall.participantId,
             name: activeCall.participantName,
           }}
           isIncoming={false}
-          onEnd={handleEndCall}
+          externalWebrtcService={webrtc}
+          externalCallState={callConnectionState}
+          localStream={localStream}
+          remoteStream={remoteStream}
         />
       )}
 
@@ -572,7 +682,7 @@ const Messages = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 truncate">{caregiver.name}</p>
-                        <p className="text-sm text-gray-500">{caregiver.role}</p>
+                        <p className="text-sm text-gray-500 capitalize">{String(caregiver.role).replace(/_/g, ' ')}</p>
                       </div>
                       <MessageCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     </button>

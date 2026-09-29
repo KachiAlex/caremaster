@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { authenticateToken } = require('../middleware/auth');
-const { scopeQuery, canAccessTable, canModifyRecord, ADMIN_ONLY_TABLES, PATIENT_ROLES, SUPER_ADMIN_ROLES, OWNER_COLUMN } = require('../middleware/authorization');
+const { scopeQuery, canAccessTable, canModifyRecord, getUserIdentityIds, isConversationParticipant, ADMIN_ONLY_TABLES, PATIENT_ROLES, SUPER_ADMIN_ROLES, OWNER_COLUMN, PARTICIPANT_TABLES } = require('../middleware/authorization');
 const { logger } = require('../utils/logger');
 const db = require('../utils/database');
 const sseManager = require('../sse');
@@ -207,7 +207,7 @@ const WRITABLE_FIELDS = {
   users: ['first_name', 'last_name', 'phone', 'photo_url', 'department', 'level', 'session', 'institution_id', 'user_type', 'is_active', 'is_verified', 'onboarding_complete', 'onboarding_data', 'display_name', 'specialization', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'profile_complete', 'account_type', 'status', 'roles', 'biometric_enabled', 'biometric_credential_id', 'two_factor_phone', 'two_factor_enabled', 'two_factor_secret', 'updated_at'],
   institutions: ['name', 'email', 'phone', 'address', 'city', 'state', 'country', 'zip_code', 'website', 'license_key', 'plan', 'seats', 'active', 'status', 'license_starts_at', 'license_ends_at', 'features', 'settings', 'updated_at'],
   appointments: ['patient_id', 'caregiver_id', 'institution_id', 'title', 'description', 'care_type', 'priority', 'scheduled_at', 'started_at', 'completed_at', 'status', 'notes', 'metadata', 'created_at', 'updated_at'],
-  telemedicine_appointments: ['client_id', 'doctor_id', 'doctor_name', 'client_name', 'appointment_date', 'status', 'reason', 'notes', 'billing_mode', 'consultation_log_id', 'bill_id', 'institution_id', 'metadata', 'created_at', 'updated_at'],
+  telemedicine_appointments: ['client_id', 'doctor_id', 'doctor_name', 'client_name', 'appointment_date', 'status', 'reason', 'notes', 'billing_mode', 'consultation_log_id', 'bill_id', 'institution_id', 'urgency', 'channel_name', 'requested_by', 'metadata', 'created_at', 'updated_at'],
   telemedicine_calls: ['appointment_id', 'client_id', 'doctor_id', 'channel_name', 'start_time', 'end_time', 'duration', 'status', 'recording_id', 'has_recording', 'metadata', 'created_at', 'updated_at'],
   telemedicine_recordings: ['call_id', 'appointment_id', 'file_url', 'duration', 'file_size', 'format', 'status', 'metadata', 'created_at', 'updated_at'],
   clients: ['name', 'full_name', 'email', 'phone', 'institution_id', 'status', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship', 'medical_conditions', 'medications', 'allergies', 'blood_type', 'genotype', 'care_level', 'insurance_provider', 'insurance_policy_number', 'national_id', 'primary_care_physician', 'physician_phone', 'notes', 'user_type', 'type', 'city', 'state', 'zip_code', 'client_id', 'assigned_caregiver', 'assigned_doctor', 'user_id'],
@@ -215,7 +215,6 @@ const WRITABLE_FIELDS = {
   caregiver_profiles: ['caregiver_id', 'bio', 'certifications', 'experience_years', 'skills', 'user_id', 'license_number', 'specialization', 'years_experience', 'availability', 'employment_type', 'hourly_rate', 'monthly_rate', 'currency', 'payment_type', 'working_hours_start', 'working_hours_end', 'working_days', 'status', 'institution_id', 'metadata'],
   care_tasks: ['title', 'description', 'status', 'completed_at', 'caregiver_id', 'patient_id', 'client_id', 'client_name', 'caregiver_name', 'institution_id', 'category', 'priority', 'task_type', 'due_date', 'due_time', 'scheduled_date', 'scheduled_time', 'notes', 'completion_notes', 'photos', 'created_by', 'created_by_name', 'metadata', 'created_at', 'updated_at'],
   assignments: ['client_id', 'caregiver_id', 'institution_id', 'patient_id', 'start_date', 'end_date', 'status', 'type', 'notes', 'metadata', 'client_name', 'client_email', 'caregiver_name', 'caregiver_email', 'assigned_by', 'assigned_by_name', 'assignment_type', 'title', 'description', 'instructions', 'assigned_to_role', 'due_date', 'due_time', 'created_at', 'updated_at'],
-  messages: ['conversation_id', 'sender_id', 'receiver_id', 'recipient_id', 'content', 'text', 'message_type', 'attachments', 'read', 'sent_at', 'read_at', 'created_at', 'sender_id'],
   care_logs: ['assignment_id', 'caregiver_id', 'client_id', 'patient_id', 'recorded_by', 'source', 'notes', 'mood', 'category', 'details', 'log_time', 'location', 'task_id', 'institution_id', 'metadata', 'created_at', 'updated_at'],
   care_plans: ['client_id', 'title', 'description', 'start_date', 'end_date', 'status'],
   vital_signs: ['patient_id', 'recorded_by', 'institution_id', 'source', 'recorded_at', 'temperature', 'temperature_unit', 'heart_rate', 'respiratory_rate', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'oxygen_saturation', 'weight', 'weight_unit', 'height', 'height_unit', 'blood_glucose', 'pain_level', 'notes', 'metadata', 'created_at', 'updated_at'],
@@ -242,12 +241,12 @@ const WRITABLE_FIELDS = {
   nurse_reports: ['patient_id', 'client_id', 'client_name', 'nurse_id', 'nurse_name', 'institution_id', 'report_type', 'situation', 'background', 'assessment', 'recommendation', 'coded_observations', 'priority_code', 'patient_condition', 'mental_status', 'mobility_status', 'nutrition_status', 'general_appearance', 'skin_condition', 'pain_level', 'pain_location', 'pain_description', 'care_activities', 'medications_given', 'treatments_provided', 'vital_signs_summary', 'care_logs_summary', 'shift_start', 'shift_end', 'handover_notes', 'status', 'follow_up_required', 'follow_up_notes', 'metadata', 'signature_data', 'news_score', 'news_data', 'acknowledged_at', 'acknowledged_by', 'doctor_notes', 'feedback_status', 'photos', 'created_at', 'updated_at'],
   subscriptions: ['institution_id', 'plan', 'status', 'start_date', 'end_date'],
   patients: ['name', 'email', 'phone', 'institution_id', 'status', 'medical_history', 'emergency_contacts', 'notes', 'date_of_birth', 'gender', 'address', 'city', 'state', 'country', 'blood_type', 'allergies', 'medications'],
-  calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'participants', 'institution_id', 'created_at', 'updated_at'],
-  conversations: ['participants', 'conversation_type', 'type', 'title', 'last_message_at', 'last_message_preview', 'institution_id', 'last_message', 'last_message_time', 'conversationType', 'lastMessage', 'lastMessageTime', 'createdAt', 'updatedAt'],
+  calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'participants', 'institution_id', 'channel_name', 'created_at', 'updated_at'],
+  conversations: ['participants', 'participant_details', 'participantDetails', 'conversation_type', 'type', 'title', 'last_message_at', 'last_message_preview', 'institution_id', 'last_message', 'last_message_time', 'conversationType', 'lastMessage', 'lastMessageTime', 'createdAt', 'updatedAt'],
   elderly_profiles: ['client_id', 'medical_conditions', 'allergies', 'dietary_requirements', 'mobility_status', 'notes'],
   call_notifications: ['call_id', 'recipient_id', 'sender_id', 'type', 'status', 'created_at', 'user_id', 'caller_id', 'call_type', 'caller_name', 'recipient_name', 'timestamp', 'updated_at', 'duration', 'metadata'],
   signaling: ['call_id', 'from', 'to', 'type', 'sdp', 'candidate', 'created_at', 'callId', 'timestamp'],
-  messages: ['conversation_id', 'conversationId', 'sender_id', 'senderId', 'text', 'content', 'type', 'sender_name', 'senderName', 'read', 'read_at', 'readAt', 'created_at', 'createdAt', 'message_type', 'messageType'],
+  messages: ['conversation_id', 'conversationId', 'sender_id', 'senderId', 'receiver_id', 'receiverId', 'recipient_id', 'recipientId', 'text', 'content', 'type', 'sender_name', 'senderName', 'read', 'read_at', 'readAt', 'sent_at', 'created_at', 'createdAt', 'message_type', 'messageType', 'institution_id', 'institutionId'],
   schedules: ['institution_id', 'institutionId', 'client_id', 'clientId', 'client_name', 'clientName', 'caregiver_id', 'caregiverId', 'caregiver_name', 'caregiverName', 'title', 'description', 'service_type', 'serviceType', 'type', 'priority', 'schedule_date', 'scheduleDate', 'end_date', 'endDate', 'start_time', 'startTime', 'end_time', 'endTime', 'comments', 'special_instructions', 'specialInstructions', 'status', 'created_at', 'updated_at'],
   security_audit_logs: ['user_id', 'userId', 'user_role', 'action', 'resource_type', 'resourceType', 'resource_id', 'resourceId', 'details', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'institution_id', 'institutionId', 'timestamp', 'created_at', 'updated_at'],
   user_sessions: ['user_id', 'userId', 'institution_id', 'institutionId', 'user_agent', 'userAgent', 'ip_address', 'ipAddress', 'active', 'created_at', 'last_activity', 'lastActivity', 'expires_at', 'expiresAt', 'ended_at', 'endedAt', 'updated_at'],
@@ -394,6 +393,140 @@ function normalizeCareLogPayload(data) {
 function normalizeInsertData(tableName, data) {
   if (tableName === 'care_logs') return normalizeCareLogPayload(data);
   return data;
+}
+
+// ─── Chat/collaboration write normalization ───
+
+/**
+ * Resolve a list of participant identifiers (which may be users.id,
+ * users.firebase_uid, or clients.id) to canonical users.id values and
+ * build participant_details [{id, name, role}] for display.
+ */
+async function resolveParticipants(participantIds) {
+  const unique = [...new Set((participantIds || []).filter(Boolean).map(String))];
+  if (unique.length === 0) return { ids: [], details: [] };
+
+  const canonicalIds = [];
+  for (const pid of unique) {
+    let user = await db('users').where({ id: pid }).first();
+    if (!user) {
+      user = await db('users').where({ firebase_uid: pid }).first();
+    }
+    if (!user) {
+      const client = await db('clients').where({ id: pid }).first();
+      if (client && client.user_id) {
+        user = await db('users').where({ id: client.user_id }).first();
+      }
+    }
+    canonicalIds.push(user ? String(user.id) : pid);
+  }
+
+  const deduped = [...new Set(canonicalIds)];
+  const users = await db('users').whereIn('id', deduped)
+    .select('id', 'first_name', 'last_name', 'email', 'user_type');
+  const userById = new Map(users.map(u => [String(u.id), u]));
+
+  const details = deduped.map(pid => {
+    const u = userById.get(pid);
+    if (!u) return { id: pid, name: 'Unknown', role: 'unknown' };
+    const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email;
+    return { id: pid, name, role: u.user_type };
+  });
+
+  return { ids: deduped, details };
+}
+
+/**
+ * Normalize a conversations insert/update: canonical participant ids,
+ * participant_details, and institution_id derived from participants.
+ */
+async function normalizeConversationData(data, req) {
+  const out = { ...data };
+  if (Array.isArray(out.participants)) {
+    const { ids, details } = await resolveParticipants(out.participants);
+    out.participants = ids;
+    if (details.length) {
+      out.participant_details = details;
+    }
+    if (!out.institution_id) {
+      const inst = await db('users').whereIn('id', ids)
+        .whereNotNull('institution_id').select('institution_id').first();
+      if (inst) out.institution_id = inst.institution_id;
+    }
+
+    // The creator must be a participant (or an admin within the institution)
+    const isAdmin = ['admin', 'institution-admin', 'InstitutionAdmin', 'super-admin', 'superadmin', 'super_admin']
+      .includes(req.user.user_type);
+    if (!isAdmin) {
+      const identityIds = await getUserIdentityIds(req.user.id);
+      if (!ids.some(pid => identityIds.includes(pid))) {
+        return { ok: false, error: 'You must be a participant of the conversation you create' };
+      }
+    }
+  }
+  if (!out.institution_id && req.user && req.user.institution_id) {
+    out.institution_id = req.user.institution_id;
+  }
+  return { ok: true, data: out };
+}
+
+/**
+ * Normalize a messages insert: sender pinned to the requester, text mirrored
+ * to content (legacy column), receiver_id resolved from the conversation's
+ * other participant, institution_id inherited from the conversation.
+ * Returns { ok, data, conversation, error }
+ */
+async function normalizeMessageData(data, req) {
+  const out = { ...data };
+  if (!out.conversation_id) {
+    return { ok: false, error: 'conversation_id is required' };
+  }
+  const conversation = await db('conversations').where({ id: out.conversation_id }).first();
+  if (!conversation) {
+    return { ok: false, error: 'Conversation not found' };
+  }
+  const identityIds = await getUserIdentityIds(req.user.id);
+  if (!isConversationParticipant(conversation, identityIds)) {
+    return { ok: false, error: 'You are not a participant in this conversation' };
+  }
+
+  out.sender_id = req.user.id;
+  if (out.text && !out.content) out.content = out.text;
+  if (!out.text && out.content) out.text = out.content;
+  if (!out.institution_id && conversation.institution_id) {
+    out.institution_id = conversation.institution_id;
+  }
+
+  // receiver_id = the other participant (direct 1:1 conversations)
+  if (!out.receiver_id) {
+    const participants = Array.isArray(conversation.participants)
+      ? conversation.participants
+      : (() => { try { return JSON.parse(conversation.participants || '[]'); } catch { return []; } })();
+    const others = participants.map(String).filter(p => !identityIds.includes(p));
+    if (others.length === 1) {
+      // Resolve to canonical users.id for notification dispatch
+      const { ids } = await resolveParticipants(others);
+      out.receiver_id = ids[0] || others[0];
+    }
+  }
+  return { ok: true, data: out, conversation };
+}
+
+/** Bump the parent conversation's last-message fields after a send. */
+async function updateConversationLastMessage(conversationId, message) {
+  try {
+    const preview = (message.text || message.content || '').toString().slice(0, 120);
+    await db('conversations').where({ id: conversationId }).update({
+      last_message: preview,
+      last_message_time: new Date(),
+      last_message_at: new Date(),
+      last_message_preview: preview,
+      updated_at: new Date(),
+    });
+  } catch (err) {
+    // Non-fatal — the message itself is already persisted
+    logger.warn(`Failed to update last_message for conversation ${conversationId}:`, err.message);
+  }
 }
 
 // JSON-stringify array/plain-object values so they insert correctly into jsonb
@@ -884,19 +1017,69 @@ router.post('/:table', async (req, res) => {
       return res.status(403).json({ success: false, message: access.reason });
     }
 
-    const data = serializeJsonValues(
-      filterWritableFields(tableName, normalizeInsertData(tableName, mapToSnakeCase(req.body, tableName)))
-    );
+    let data = filterWritableFields(tableName, normalizeInsertData(tableName, mapToSnakeCase(req.body, tableName)));
+
+    // ─── Collaboration-table write normalization ───
+    // Participant tables have no "owner" column — ownership/membership is
+    // enforced here instead of the patient-ownership forcing below.
+    let messageConversation = null;
+    if (tableName === 'conversations') {
+      const norm = await normalizeConversationData(data, req);
+      if (!norm.ok) {
+        return res.status(403).json({ success: false, message: norm.error });
+      }
+      data = norm.data;
+    } else if (tableName === 'messages') {
+      const norm = await normalizeMessageData(data, req);
+      if (!norm.ok) {
+        const status = norm.error === 'Conversation not found' ? 404 : 403;
+        return res.status(status).json({ success: false, message: norm.error });
+      }
+      data = norm.data;
+      messageConversation = norm.conversation;
+    } else if (tableName === 'calls') {
+      // The caller is always the authenticated user
+      data.caller_id = req.user.id;
+      if (!data.call_id) data.call_id = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      if (!data.channel_name) data.channel_name = `call_${data.call_id}`;
+      if (!data.institution_id && req.user.institution_id) data.institution_id = req.user.institution_id;
+    } else if (tableName === 'call_notifications' && data.call_id) {
+      // Only participants of the referenced call may create notifications
+      const call = await db('calls').where({ call_id: data.call_id }).first();
+      const identityIds = await getUserIdentityIds(req.user.id);
+      const isParty = call && [call.caller_id, call.recipient_id, call.receiver_id]
+        .map(String).some(id => identityIds.includes(id));
+      if (!isParty) {
+        return res.status(403).json({ success: false, message: 'You are not a participant in this call' });
+      }
+    } else if (tableName === 'telemedicine_appointments') {
+      // Persist request context fields the form sends
+      if (!data.urgency && req.body.urgency) data.urgency = req.body.urgency;
+      if (!data.requested_by) data.requested_by = req.user.id;
+      const meta = (data.metadata && typeof data.metadata === 'object') ? data.metadata : {};
+      for (const [k, v] of Object.entries({
+        preferredDate: req.body.preferredDate,
+        preferredTime: req.body.preferredTime,
+        consultationType: req.body.type,
+        duration: req.body.duration,
+      })) {
+        if (v !== undefined && v !== null) meta[k] = v;
+      }
+      if (Object.keys(meta).length) data.metadata = meta;
+    }
 
     // ─── Row-level authorization: enforce ownership on create ───
     // Patients can only create records for themselves. If they try to set
     // patient_id to someone else's ID, override it with their own.
-    if (PATIENT_ROLES.includes(req.user.user_type)) {
+    // (Participant tables are excluded — membership was enforced above.)
+    if (PATIENT_ROLES.includes(req.user.user_type) && !PARTICIPANT_TABLES.includes(tableName)) {
       const ownerCol = OWNER_COLUMN[tableName];
       if (ownerCol && ownerCol !== 'id') {
         data[ownerCol] = req.user.id; // Force ownership
       }
     }
+
+    data = serializeJsonValues(data);
 
     // Registration drafts belong to the creating admin's institution — never
     // trust client-supplied institution_id/created_by on this table.
@@ -956,6 +1139,12 @@ router.post('/:table', async (req, res) => {
     }
 
     const [record] = await db(tableName).insert(data).returning('*');
+
+    // Bump the parent conversation's last-message fields server-side so the
+    // sender doesn't need a second (authorization-sensitive) update call.
+    if (tableName === 'messages' && messageConversation) {
+      await updateConversationLastMessage(messageConversation.id, record);
+    }
 
     // ─── Auto-create a user account when a client record is created ───
     // This ensures every client can log in immediately without the admin
@@ -1080,10 +1269,22 @@ router.put('/:table/:id', async (req, res) => {
     }
 
     // Patients cannot change ownership of their records
-    if (PATIENT_ROLES.includes(req.user.user_type)) {
+    if (PATIENT_ROLES.includes(req.user.user_type) && !PARTICIPANT_TABLES.includes(tableName)) {
       const ownerCol = OWNER_COLUMN[tableName];
       if (ownerCol && ownerCol !== 'id') {
         delete data[ownerCol]; // Strip any attempt to reassign
+      }
+    }
+
+    // Messages: only the read-flag fields may be updated by non-senders.
+    // (canModifyRecord already verified conversation membership.)
+    if (tableName === 'messages' && String(existingRecord.sender_id) !== String(req.user.id)) {
+      const allowed = ['read', 'read_at'];
+      for (const key of Object.keys(data)) {
+        if (!allowed.includes(key)) delete data[key];
+      }
+      if (Object.keys(data).length === 0) {
+        return res.status(400).json({ success: false, message: 'No valid fields to update' });
       }
     }
 
@@ -1096,6 +1297,13 @@ router.put('/:table/:id', async (req, res) => {
       if (data.status && data.status !== 'cancelled') {
         delete data.status;
       }
+    }
+
+    // When an admin schedules a telemedicine appointment, assign the shared
+    // Agora channel both parties will join (deterministic — no per-side
+    // random suffix, which previously made meetings impossible).
+    if (tableName === 'telemedicine_appointments' && data.status === 'scheduled' && !existingRecord.channel_name && !data.channel_name) {
+      data.channel_name = `consult_${existingRecord.id}`;
     }
 
     const [record] = await db(tableName).where({ id: existingRecord.id }).update(data).returning('*');

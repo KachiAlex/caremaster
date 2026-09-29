@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, limit } from 'backend/database';;
+import { collection, doc, addDoc, getDocs, onSnapshot, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, limit } from 'backend/database';;
 import { auth, db } from '../backend/config';;
 import { buildConstraints } from './deviceSettingsService';;
 
@@ -12,6 +12,10 @@ class WebRTCService {
     this.isInitiator = false;
     this.isScreenSharing = false;
     this.statsInterval = null;
+    // ICE candidates that arrived before the remote description was set.
+    // With polling-based signaling, candidates routinely beat the offer/
+    // answer — they'd be dropped by addIceCandidate without this queue.
+    this.pendingIceCandidates = [];
     this.networkStats = {
       bandwidth: 0,
       packetLoss: 0,
@@ -84,6 +88,7 @@ class WebRTCService {
       this.isInitiator = false;
       this.remoteStream = null;
       this.localStream = null;
+      this.pendingIceCandidates = [];
 
       await this.setupPeerConnection();
       return true;
@@ -171,16 +176,25 @@ class WebRTCService {
       this.callId = callId;
       this.isInitiator = true;
 
-      // Create call document in Backend
-      const callDoc = await addDoc(collection(db, 'calls'), {
-        callId,
-        callerId: this.getCurrentUserId(),
-        recipientId,
-        callType,
-        status: 'initiating',
-        createdAt: serverTimestamp(),
-        endedAt: null
-      });
+      // Create call document — but only if it doesn't exist yet. Most callers
+      // already created the row via callService.initiateCall; a second insert
+      // leaves a stale 'initiating' row behind.
+      try {
+        const existing = await getDocs(query(collection(db, 'calls'), where('callId', '==', callId), limit(1)));
+        if (existing.empty) {
+          await addDoc(collection(db, 'calls'), {
+            callId,
+            callerId: this.getCurrentUserId(),
+            recipientId,
+            callType,
+            status: 'initiating',
+            createdAt: serverTimestamp(),
+            endedAt: null
+          });
+        }
+      } catch (e) {
+        console.warn('Call-record existence check failed, continuing:', e.message);
+      }
 
       // Get user media
       const mediaConstraints = callType === 'video' 
@@ -228,7 +242,8 @@ class WebRTCService {
   async handleOffer(offer, callType) {
     try {
       await this.peerConnection.setRemoteDescription(offer);
-      
+      await this.flushPendingIceCandidates();
+
       // Create answer
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
@@ -249,10 +264,21 @@ class WebRTCService {
   async handleAnswer(answer) {
     try {
       await this.peerConnection.setRemoteDescription(answer);
+      await this.flushPendingIceCandidates();
       return true;
     } catch (error) {
       console.error('Error handling answer:', error);
       throw error;
+    }
+  }
+
+  // Drain candidates queued before the remote description was set
+  async flushPendingIceCandidates() {
+    if (!this.pendingIceCandidates.length) return;
+    const queued = this.pendingIceCandidates;
+    this.pendingIceCandidates = [];
+    for (const candidate of queued) {
+      await this.handleIceCandidate(candidate);
     }
   }
 
@@ -264,11 +290,19 @@ class WebRTCService {
         console.log('⏭️ Skipping null/end-of-candidates signal');
         return true;
       }
-      
+
+      // Queue candidates that arrive before the remote description —
+      // with polled signaling this race is common, and addIceCandidate
+      // would otherwise throw and lose the candidate.
+      if (!this.peerConnection || !this.peerConnection.remoteDescription) {
+        this.pendingIceCandidates.push(candidate);
+        return true;
+      }
+
       // If candidate is already an RTCIceCandidate object, use it directly
       // If it's a plain object from Database, create RTCIceCandidate from it
       let iceCandidate = candidate;
-      
+
       if (candidate && !(candidate instanceof RTCIceCandidate)) {
         // Reconstruct RTCIceCandidateInit from serialized data
         iceCandidate = new RTCIceCandidate({
@@ -278,7 +312,7 @@ class WebRTCService {
           usernameFragment: candidate.usernameFragment
         });
       }
-      
+
       await this.peerConnection.addIceCandidate(iceCandidate);
       console.log('✅ ICE candidate added successfully');
       return true;
@@ -727,8 +761,8 @@ class WebRTCService {
   getCurrentUserId() {
     // The auth stub builds currentUser from the backend user object which uses
     // `id` (not `uid`). Check both, plus fall back to localStorage.
-    if (auth.currentUser?.uid) return auth.currentUser.uid;
     if (auth.currentUser?.id) return auth.currentUser.id;
+    if (auth.currentUser?.uid) return auth.currentUser.uid;
     // Fallback: read from localStorage (set by the auth shim on login)
     try {
       const stored = localStorage.getItem('user');

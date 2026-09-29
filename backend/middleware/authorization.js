@@ -59,6 +59,7 @@ const ADMIN_ONLY_TABLES = [
   'wallets',
   'transactions',
   'receipts',
+  'registration_drafts',
 ];
 
 // ─── Tables accessible to all authenticated users (non-sensitive) ───
@@ -116,6 +117,140 @@ const OWNER_COLUMN = {
   conversations: 'id', // handled specially (participants array)
   messages: 'conversation_id', // handled specially
 };
+
+// ─── Collaboration tables scoped by membership rather than an owner column ───
+// conversations/messages/calls/call_notifications/signaling are only visible
+// to participants (and same-institution admins). Handled before role branches.
+const PARTICIPANT_TABLES = [
+  'conversations',
+  'messages',
+  'calls',
+  'call_notifications',
+  'signaling',
+];
+
+/**
+ * All identifier forms that may refer to this user inside denormalized
+ * columns like conversations.participants: canonical users.id, legacy
+ * firebase_uid, and their clients row id (some rows store clients.id).
+ */
+async function getUserIdentityIds(userId) {
+  const ids = new Set([String(userId)]);
+  try {
+    const [userRow, clientRows] = await Promise.all([
+      db('users').where({ id: userId }).select('firebase_uid').first(),
+      db('clients').where({ user_id: userId }).select('id'),
+    ]);
+    if (userRow && userRow.firebase_uid) ids.add(String(userRow.firebase_uid));
+    clientRows.forEach(r => { if (r.id) ids.add(String(r.id)); });
+  } catch (err) {
+    logger.error('Failed to resolve user identity ids:', err);
+  }
+  return Array.from(ids);
+}
+
+/**
+ * Scope a participant-table query so non-admin users only see rows for
+ * conversations/calls they belong to.
+ */
+function scopeParticipantTable(query, tableName, identityIds) {
+  const participantClause = (alias) => function() {
+    for (const id of identityIds) {
+      this.orWhereRaw(`${alias}.participants @> ?::jsonb`, [JSON.stringify([id])]);
+    }
+  };
+
+  switch (tableName) {
+    case 'conversations':
+      query.where(participantClause('conversations'));
+      break;
+    case 'messages':
+      query.whereIn('messages.conversation_id', function() {
+        this.select(db.raw('id::text')).from('conversations').where(participantClause('conversations'));
+      });
+      break;
+    case 'calls':
+      query.where(function() {
+        this.whereIn('calls.caller_id', identityIds)
+          .orWhereIn('calls.recipient_id', identityIds)
+          .orWhereIn('calls.receiver_id', identityIds);
+      });
+      break;
+    case 'call_notifications':
+      query.whereIn('call_notifications.user_id', identityIds);
+      break;
+    case 'signaling':
+      // Signaling rows belong either to an ad-hoc call (calls.call_id) or to
+      // a scheduled consult channel 'consult_<appointmentId>'.
+      query.where(function() {
+        this.whereIn('signaling.call_id', function() {
+          this.select('call_id').from('calls').where(function() {
+            this.whereIn('caller_id', identityIds)
+              .orWhereIn('recipient_id', identityIds)
+              .orWhereIn('receiver_id', identityIds);
+          });
+        }).orWhereIn('signaling.call_id', function() {
+          this.select(db.raw("'consult_' || id::text")).from('telemedicine_appointments')
+            .where(function() {
+              this.whereIn('client_id', identityIds).orWhereIn('doctor_id', identityIds);
+            });
+        });
+      });
+      break;
+    default:
+      query.whereRaw('1=0');
+  }
+  return query;
+}
+
+/**
+ * Admin (institution) scoping for participant tables: institution-tagged
+ * rows, or rows belonging to the tenant's conversations/calls.
+ */
+function scopeParticipantTableForAdmin(query, tableName, institutionId) {
+  switch (tableName) {
+    case 'conversations':
+      query.where('conversations.institution_id', institutionId);
+      break;
+    case 'messages':
+      query.whereIn('messages.conversation_id', function() {
+        this.select(db.raw('id::text')).from('conversations').where('institution_id', institutionId);
+      });
+      break;
+    case 'calls':
+      query.where('calls.institution_id', institutionId);
+      break;
+    case 'call_notifications':
+      query.whereIn('call_notifications.call_id', function() {
+        this.select('call_id').from('calls').where('institution_id', institutionId);
+      });
+      break;
+    case 'signaling':
+      query.where(function() {
+        this.whereIn('signaling.call_id', function() {
+          this.select('call_id').from('calls').where('institution_id', institutionId);
+        }).orWhereIn('signaling.call_id', function() {
+          this.select(db.raw("'consult_' || id::text")).from('telemedicine_appointments')
+            .where('institution_id', institutionId);
+        });
+      });
+      break;
+    default:
+      query.whereRaw('1=0');
+  }
+  return query;
+}
+
+/**
+ * Check whether the requester is a participant in a conversation row
+ * (participants is a jsonb array of user ids in any historical form).
+ */
+function isConversationParticipant(record, identityIds) {
+  const participants = Array.isArray(record.participants)
+    ? record.participants
+    : (() => { try { return JSON.parse(record.participants || '[]'); } catch { return []; } })();
+  return participants.some(p => identityIds.includes(String(p)));
+}
 
 /**
  * Get the list of assigned patient IDs for a caregiver/doctor.
@@ -176,6 +311,20 @@ async function scopeQuery(query, user, tableName) {
     return query;
   }
 
+  // Participant-scoped collaboration tables — membership decides visibility
+  // for non-admins; institution scoping for admins (strict per tenant).
+  if (PARTICIPANT_TABLES.includes(tableName)) {
+    if (ADMIN_ROLES.includes(userType) && user.institution_id) {
+      return scopeParticipantTableForAdmin(query, tableName, user.institution_id);
+    }
+    if (ADMIN_ROLES.includes(userType)) {
+      query.whereRaw('1=0');
+      return query;
+    }
+    const identityIds = await getUserIdentityIds(user.id);
+    return scopeParticipantTable(query, tableName, identityIds);
+  }
+
   // Admin: scope by institution_id if the table has it
   if (ADMIN_ROLES.includes(userType)) {
     const hasInstitutionId = await tableHasColumn(tableName, 'institution_id');
@@ -189,7 +338,12 @@ async function scopeQuery(query, user, tableName) {
   if (PATIENT_ROLES.includes(userType)) {
     const ownerCol = OWNER_COLUMN[tableName];
     if (ownerCol) {
-      if (ownerCol === 'id') {
+      if (tableName === 'telemedicine_appointments') {
+        // client_id may hold either the users.id or the clients row id —
+        // match every identifier form for this user.
+        const identityIds = await getUserIdentityIds(user.id);
+        query.whereIn(`${tableName}.client_id`, identityIds);
+      } else if (ownerCol === 'id') {
         // For clients/patients table, the patient's own row
         query.where(`${tableName}.id`, user.id);
       } else if (tableName === 'assignments' && ownerCol === 'patient_id') {
@@ -395,12 +549,54 @@ async function canModifyRecord(user, tableName, record) {
       (!!user.firebase_uid && record.firebase_uid === user.firebase_uid);
   }
 
+  // Participant-scoped collaboration tables — members may update rows in
+  // conversations/calls they belong to (the route whitelist limits which
+  // fields are actually writable). Non-participants are denied.
+  if (PARTICIPANT_TABLES.includes(tableName)) {
+    const identityIds = await getUserIdentityIds(user.id);
+    switch (tableName) {
+      case 'conversations':
+        return isConversationParticipant(record, identityIds);
+      case 'messages': {
+        const conv = await db('conversations').where({ id: record.conversation_id }).first();
+        return !!conv && isConversationParticipant(conv, identityIds);
+      }
+      case 'calls':
+        return identityIds.includes(String(record.caller_id)) ||
+          identityIds.includes(String(record.recipient_id)) ||
+          identityIds.includes(String(record.receiver_id));
+      case 'call_notifications':
+        return identityIds.includes(String(record.user_id));
+      case 'signaling': {
+        // Consult channels ('consult_<appointmentId>') belong to the
+        // appointment's client + doctor rather than a calls row.
+        if (String(record.call_id || '').startsWith('consult_')) {
+          const apptId = String(record.call_id).slice('consult_'.length);
+          const appt = await db('telemedicine_appointments').where({ id: apptId }).first();
+          return !!appt && (identityIds.includes(String(appt.client_id)) ||
+            identityIds.includes(String(appt.doctor_id)));
+        }
+        const call = await db('calls').where({ call_id: record.call_id }).first();
+        if (!call) return false;
+        return identityIds.includes(String(call.caller_id)) ||
+          identityIds.includes(String(call.recipient_id)) ||
+          identityIds.includes(String(call.receiver_id));
+      }
+      default:
+        return false;
+    }
+  }
+
   // Patient: check ownership
   if (PATIENT_ROLES.includes(userType)) {
     const ownerCol = OWNER_COLUMN[tableName];
     if (!ownerCol) return true; // Non-patient table, allow
     if (ownerCol === 'id') return record.id === user.id;
     const recordOwnerId = record[ownerCol];
+    if (tableName === 'telemedicine_appointments' && ownerCol === 'client_id') {
+      const identityIds = await getUserIdentityIds(user.id);
+      return identityIds.includes(String(recordOwnerId));
+    }
     return recordOwnerId === user.id;
   }
 
@@ -487,9 +683,12 @@ module.exports = {
   canModifyRecord,
   getAssignedPatientIds,
   getDoctorPatientIds,
+  getUserIdentityIds,
+  isConversationParticipant,
   PATIENT_DATA_TABLES,
   ADMIN_ONLY_TABLES,
   PUBLIC_TABLES,
+  PARTICIPANT_TABLES,
   PATIENT_ROLES,
   CAREGIVER_ROLES,
   DOCTOR_ROLES,

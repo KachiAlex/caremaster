@@ -201,15 +201,9 @@ export const sendMessage = async (conversationId, senderId, messageData) => {
     };
     
     const docRef = await addDoc(messagesRef, newMessage);
-    
-    // Update conversation's last message
-    const conversationRef = doc(db, CONVERSATIONS_COLLECTION, conversationId);
-    await updateDoc(conversationRef, {
-      lastMessage: messageData.text || messageData.content,
-      lastMessageTime: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    
+    // The backend updates the conversation's lastMessage fields server-side —
+    // a second PUT from here would race and historically 403'd for patients.
+
     console.log('Message sent with ID:', docRef.id);
     return docRef.id;
   } catch (error) {
@@ -498,15 +492,14 @@ export const subscribeToUserConversations = (userId, callback) => {
       });
     });
     
-    // Sort by lastMessageTime descending (most recent first)
-    if (isFallback) {
-      conversations.sort((a, b) => {
-        const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
-        const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
-        return timeB - timeA;
-      });
-    }
-    
+    // Sort by lastMessageTime descending (most recent first) — always, since
+    // the server may order by a different column.
+    conversations.sort((a, b) => {
+      const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+      const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+      return timeB - timeA;
+    });
+
     callback(conversations);
   };
   

@@ -2448,12 +2448,18 @@ const InstitutionAdminDashboard = () => {
     }
 
     try {
-      const userId = user?.uid || userProfile?.userId || userProfile?.id;
+      // Canonical users.id first — conversations.participants and calls
+      // rows store backend ids, not firebase uids.
+      const userId = userProfile?.id || user?.id || user?.uid || userProfile?.uid;
 
       // Find recipient from participants array
       let recipientId = null;
-      if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
-        recipientId = selectedConversation.participants.find(p => p && p !== userId);
+      const participantDetails = Array.isArray(selectedConversation.participantDetails)
+        ? selectedConversation.participantDetails : [];
+      const detailMatch = participantDetails.find(p => p && String(p.id) !== String(userId));
+      if (detailMatch) recipientId = detailMatch.id;
+      if (!recipientId && selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
+        recipientId = selectedConversation.participants.find(p => p && String(p) !== String(userId));
       }
       if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
         recipientId = selectedConversation.userId;
@@ -2487,10 +2493,8 @@ const InstitutionAdminDashboard = () => {
         await service.initialize();
         webrtcRef.current = service;
 
-        // Start call with media (audio only for voice call)
-        await service.startCall(result.callId, recipientId, 'voice');
-
-        // Set up callbacks after initialization
+        // Register callbacks BEFORE startCall — it acquires media and fires
+        // onLocalStream, which is lost if callbacks are set afterwards.
         service.setCallbacks({
           onLocalStream: (stream) => setLocalStream(stream),
           onRemoteStream: (stream) => setRemoteStream(stream),
@@ -2507,6 +2511,9 @@ const InstitutionAdminDashboard = () => {
             }
           }
         });
+
+        // Start call with media (audio only for voice call)
+        await service.startCall(result.callId, recipientId, 'voice');
 
         // Listen for signaling messages
         service.listenForSignaling(result.callId, async (message) => {
@@ -2544,7 +2551,7 @@ const InstitutionAdminDashboard = () => {
     }
 
     try {
-      const userId = user?.uid || userProfile?.uid || userProfile?.userId || userProfile?.id;
+      const userId = userProfile?.id || user?.id || user?.uid || userProfile?.uid;
 
       if (!userId) {
         toast.error('Unable to identify your user ID. Please refresh and try again.');
@@ -2553,8 +2560,12 @@ const InstitutionAdminDashboard = () => {
 
       // Find recipient ID
       let recipientId = null;
-      if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
-        recipientId = selectedConversation.participants.find(p => p && p !== userId);
+      const participantDetails = Array.isArray(selectedConversation.participantDetails)
+        ? selectedConversation.participantDetails : [];
+      const detailMatch = participantDetails.find(p => p && String(p.id) !== String(userId));
+      if (detailMatch) recipientId = detailMatch.id;
+      if (!recipientId && selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
+        recipientId = selectedConversation.participants.find(p => p && String(p) !== String(userId));
       }
       if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
         recipientId = selectedConversation.userId;
@@ -2591,9 +2602,8 @@ const InstitutionAdminDashboard = () => {
         await service.initialize();
         webrtcRef.current = service;
 
-        // Start call with media (video + audio)
-        await service.startCall(result.callId, recipientId, 'video');
-
+        // Callbacks must be registered BEFORE startCall — it fires
+        // onLocalStream while acquiring media.
         service.setCallbacks({
           onLocalStream: (stream) => setLocalStream(stream),
           onRemoteStream: (stream) => setRemoteStream(stream),
@@ -2610,6 +2620,9 @@ const InstitutionAdminDashboard = () => {
             }
           }
         });
+
+        // Start call with media (video + audio)
+        await service.startCall(result.callId, recipientId, 'video');
 
         // Listen for signaling messages
         service.listenForSignaling(result.callId, async (message) => {
@@ -3256,12 +3269,27 @@ const renderMessagesTab = () => {
               <button
                 onClick={async () => {
                   try {
-                    await callService.answerCall(incomingCall.callId, user?.uid);
+                    const myId = userProfile?.id || user?.id || user?.uid;
+                    await callService.answerCall(incomingCall.callId, myId);
                     setIncomingCall(null);
                     // Initialize WebRTC for answering
                     const service = new WebRTCService();
                     await service.initialize();
                     webrtcRef.current = service;
+                    // Register callbacks BEFORE answerCall acquires media
+                    service.setCallbacks({
+                      onLocalStream: (stream) => setLocalStream(stream),
+                      onRemoteStream: (stream) => {
+                        setRemoteStream(stream);
+                        if (timerRef.current) clearInterval(timerRef.current);
+                        const start = callStartAt || new Date();
+                        if (!callStartAt) setCallStartAt(start);
+                        timerRef.current = setInterval(() => {
+                          setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+                        }, 1000);
+                      },
+                      onCallStateChange: (state) => setCallConnectionState(state),
+                    });
                     await service.answerCall(incomingCall.callId, incomingCall.callType || 'video');
                     setCallType(incomingCall.callType || 'video');
                     setActiveCall({
@@ -3294,7 +3322,7 @@ const renderMessagesTab = () => {
               <button
                 onClick={async () => {
                   try {
-                    await callService.rejectCall(incomingCall.callId, user?.uid);
+                    await callService.rejectCall(incomingCall.callId, userProfile?.id || user?.id || user?.uid);
                   } catch (e) { console.error(e); }
                   setIncomingCall(null);
                 }}
