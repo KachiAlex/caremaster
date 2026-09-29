@@ -13,7 +13,8 @@ import {
   Smile,
   User,
   Plus,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { sendMessage, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages, markConversationAsRead } from '../api/messagesAPI';
@@ -443,8 +444,8 @@ const Messages = () => {
 
   return (
     <div className="h-[calc(100vh-8rem)] flex bg-white rounded-lg shadow-sm border border-gray-200">
-      {/* Conversations Sidebar */}
-      <div className="w-1/3 border-r border-gray-200 flex flex-col">
+      {/* Conversations Sidebar — full-width on mobile until a chat is open */}
+      <div className={`${selectedChat ? 'hidden md:flex' : 'flex'} w-full md:w-80 md:shrink-0 border-r border-gray-200 flex-col`}>
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
@@ -513,14 +514,21 @@ const Messages = () => {
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      {/* Chat Area — full-width on mobile only when a chat is selected */}
+      <div className={`${selectedChat ? 'flex' : 'hidden md:flex'} flex-1 flex-col`}>
         {selectedChat ? (
           <>
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 bg-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setSelectedChat(null)}
+                    className="md:hidden p-2 -ml-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+                    title="Back to conversations"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
                   <div className="relative">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                       <User className="h-5 w-5 text-blue-600" />
