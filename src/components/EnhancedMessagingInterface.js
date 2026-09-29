@@ -341,7 +341,12 @@ const EnhancedMessagingInterface = () => {
     }
 
     setSelectedConversation(conversation);
-    
+    // On narrow screens the sidebar overlaps the chat — hide it so the
+    // conversation is actually visible when opened (tap Menu to reopen).
+    if (window.innerWidth < 1024) {
+      setShowSidebar(false);
+    }
+
     try {
       // Load messages for this conversation
       const conversationMessages = await getMessagesByConversation(conversation.id);

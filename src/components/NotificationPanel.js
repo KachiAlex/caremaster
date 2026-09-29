@@ -41,9 +41,10 @@ const NotificationPanel = ({ userId }) => {
 
   const handleNotificationClick = async (notification) => {
     try {
-      // Mark as read
+      // Navigate immediately — awaiting markAsRead first can hang the tap on
+      // a slow mobile connection and the user never reaches the target.
       if (!notification.read) {
-        await markAsRead(notification.id);
+        markAsRead(notification.id).catch(() => {});
       }
 
       const navigateTo = resolveNavigateTo(notification);
