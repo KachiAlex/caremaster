@@ -538,6 +538,33 @@ const InstitutionCaregiverDashboard = () => {
     setActiveTab(tabId);
   }, [pushTab]);
 
+  // Deep-link support: ?tab=<tabId> opens a specific tab (e.g. from a
+  // notification), and &conversation=<id> auto-selects that conversation.
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+    // eslint-disable-next-line
+  }, []);
+  const deepLinkedConversationRef = React.useRef(null);
+  useEffect(() => {
+    const convParam = searchParams.get('conversation');
+    if (!convParam || deepLinkedConversationRef.current === convParam) return;
+    if (!Array.isArray(conversations) || conversations.length === 0) return;
+    const match = conversations.find(c => (c.conversationId || c.id) === convParam);
+    if (!match) return;
+    deepLinkedConversationRef.current = convParam;
+    setSelectedConversation(match);
+    // Mirror handleConversationClick's layout behavior (declared below —
+    // read at effect-run time, never in the deps array)
+    if (isMobileMessagingView) {
+      setShowMobileChatPane(true);
+    } else {
+      setIsConversationListCollapsed(false);
+    }
+    loadMessagesForConversation(convParam);
+    // eslint-disable-next-line
+  }, [searchParams, conversations]);
+
   const handleBack = useCallback(() => {
     const prevTab = goBack();
     if (prevTab && typeof prevTab === 'string') {
@@ -2008,12 +2035,12 @@ const InstitutionCaregiverDashboard = () => {
 
   // Load real conversations and merge with platform users
   const loadConversations = useCallback(async () => {
-    if (!user?.uid) return;
-    
+    if (!myUserId) return;
+
     try {
-      // Load existing conversations
-      const existingConversations = await getConversationsByUser(user.uid);
-      
+      // Load existing conversations — participants store canonical users.id
+      const existingConversations = await getConversationsByUser(myUserId);
+
       // Load all platform users to map user IDs to names
       const users = await loadPlatformUsers();
       const userMap = new Map(users.map(u => [u.id, u]));
@@ -2022,11 +2049,11 @@ const InstitutionCaregiverDashboard = () => {
       const enrichedConversations = await Promise.all(
         existingConversations.map(async (conv) => {
         // Get the other participant(s) in the conversation
-        const otherParticipants = (conv.participants || []).filter(id => id !== user.uid);
+        const otherParticipants = (conv.participants || []).filter(id => String(id) !== String(myUserId));
         const otherUser = otherParticipants.length > 0 ? userMap.get(otherParticipants[0]) : null;
-          
+
           // Calculate unread message count for this conversation
-          const unreadCount = await getUnreadCountForConversation(conv.id, user.uid);
+          const unreadCount = await getUnreadCountForConversation(conv.id, myUserId);
         
         return {
           ...conv,
@@ -2060,7 +2087,7 @@ const InstitutionCaregiverDashboard = () => {
             timestamp: new Date().toISOString(),
             unread: 0, // New conversations have no unread messages
             type: u.role || u.userType || 'user',
-            participants: [user.uid, u.id],
+            participants: [myUserId, u.id],
             isNew: true,
             userData: u
           }));
@@ -2081,11 +2108,11 @@ const InstitutionCaregiverDashboard = () => {
         toast.error('Failed to load conversations');
       }
     }
-  }, [user?.uid, loadPlatformUsers]);
+  }, [myUserId, loadPlatformUsers]);
 
   // Load conversations when user changes (placed after loadConversations definition)
   useEffect(() => {
-    if (user?.uid) {
+    if (myUserId) {
       loadConversations();
     }
   }, [user?.uid, loadConversations]);
@@ -2395,9 +2422,9 @@ const InstitutionCaregiverDashboard = () => {
       const conversationMessages = await getMessagesByConversation(conversationId);
 
       // Mark conversation as read when opening it
-      if (user?.uid && conversationId) {
+      if (myUserId && conversationId) {
         try {
-          await markConversationAsRead(conversationId, user.uid);
+          await markConversationAsRead(conversationId, myUserId);
           // Refresh conversations to update unread counts
           loadConversations();
         } catch (markReadError) {
@@ -2410,9 +2437,9 @@ const InstitutionCaregiverDashboard = () => {
       const userMap = new Map(users.map(u => [u.id, u]));
       
       // Also include current user in the map
-      if (user?.uid && userProfile) {
-        userMap.set(user.uid, {
-          id: user.uid,
+      if (myUserId && userProfile) {
+        userMap.set(myUserId, {
+          id: myUserId,
           name: userProfile.name || userProfile.displayName || userProfile.email || 'You',
           photoURL: userProfile.photoURL || userProfile.profilePicture || userProfile.profilePictureUrl || null,
           ...userProfile
@@ -2493,7 +2520,7 @@ const InstitutionCaregiverDashboard = () => {
           conversationId = conversationId.id;
         }
 
-        await sendMessageAPI(conversationId, user.uid, {
+        await sendMessageAPI(conversationId, myUserId, {
           text: newMessage,
           type: 'text',
           senderName: userProfile?.name || 'Caregiver'
@@ -3244,7 +3271,7 @@ const InstitutionCaregiverDashboard = () => {
           open={showNewConversationModal}
           onClose={() => setShowNewConversationModal(false)}
           members={tenantMembers}
-          currentUserId={user?.uid}
+          currentUserId={myUserId}
           onSelect={handleNewConversationSelect}
         />
       </>
@@ -4840,7 +4867,7 @@ const InstitutionCaregiverDashboard = () => {
         }))}
         headerActions={
           <>
-            <NotificationBell userId={user?.uid} />
+            <NotificationBell userId={myUserId} />
             {userRoles && userRoles.length > 1 && (
               <DashboardSwitcher
                 userRoles={userRoles}

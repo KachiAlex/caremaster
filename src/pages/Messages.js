@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   MessageCircle,
   Send,
@@ -27,6 +28,8 @@ import { db } from '../backend/config';
 
 const Messages = () => {
   const { user, userProfile } = useUser();
+  const [searchParams] = useSearchParams();
+  const deepLinkedConvRef = useRef(null);
   const [selectedChat, setSelectedChat] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,6 +78,16 @@ const Messages = () => {
       setConversations(data || []);
       setFilteredConversations(data || []);
       setLoading(false);
+
+      // Deep-link: ?conversation=<id> — select it once it arrives
+      const convParam = searchParams.get('conversation');
+      if (convParam && deepLinkedConvRef.current !== convParam) {
+        const match = (data || []).find(c => c.id === convParam);
+        if (match) {
+          deepLinkedConvRef.current = convParam;
+          handleSelectChat(match);
+        }
+      }
     });
     return () => { if (unsubscribe) unsubscribe(); };
   }, [myId]);
