@@ -625,10 +625,15 @@ const InstitutionAdminDashboard = () => {
     if (activeTab !== 'messages') return;
 
     if (isMobileMessagingView) {
-      setShowMobileChatPane(false);
+      // Don't collapse the chat pane when a notification deep-linked us
+      // straight into a conversation — the deep-link effect already opened it.
+      if (!searchParams.get('conversation')) {
+        setShowMobileChatPane(false);
+      }
     } else {
       setShowMobileChatPane(true);
     }
+    // eslint-disable-next-line
   }, [activeTab, isMobileMessagingView]);
 
   useEffect(() => {
