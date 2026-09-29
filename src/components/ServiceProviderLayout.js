@@ -18,7 +18,8 @@ import {
   X,
   LogOut,
   Heart,
-  Users
+  Users,
+  Video
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { db, auth } from '../backend/config';
@@ -68,6 +69,7 @@ const ServiceProviderLayout = () => {
     { name: 'clients', href: '/service-provider/medical-records', icon: Users, roles: ['caregiver', 'doctor', 'admin'] },
     { name: 'Prescriptions', href: '/service-provider/prescriptions', icon: Pill, roles: ['doctor', 'admin'] },
     { name: 'Consultations', href: '/service-provider/consultations', icon: Stethoscope, roles: ['doctor', 'admin'] },
+    { name: 'Video Consults', href: '/service-provider/telemedicine', icon: Video, roles: ['doctor', 'admin'] },
     { name: 'Diagnostics', href: '/service-provider/diagnostics', icon: FileText, roles: ['doctor', 'admin'] },
     { name: 'Settings', href: '/service-provider/settings', icon: Settings, roles: ['caregiver', 'doctor', 'admin'] },
   ];

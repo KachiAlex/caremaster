@@ -123,6 +123,11 @@ const InstitutionCaregiverDashboard = () => {
   
   // Institution resolution: effectiveInstitutionId is derived above.
 
+  // Canonical account id — conversations.participants, calls.caller_id etc.
+  // store backend users.id, NOT firebase uid. Use this for all participant
+  // comparisons and outbound ids.
+  const myUserId = userProfile?.id || user?.id || userProfile?.uid || user?.uid;
+
   // Helper to convert Firestore Timestamps (or any date-like value) to JS Date
   const toDate = (v) => v?.toDate ? v.toDate() : new Date(v);
 
@@ -2497,7 +2502,7 @@ const InstitutionCaregiverDashboard = () => {
         const message = {
           id: Date.now(),
           text: newMessage,
-          senderId: user?.uid,
+          senderId: myUserId,
           senderName: userProfile?.name || 'You',
           createdAt: new Date().toISOString(),
           read: false
@@ -2521,9 +2526,14 @@ const InstitutionCaregiverDashboard = () => {
     // Determine the recipient user ID from the selected conversation
     const getRecipientId = () => {
       if (!selectedConversation) return null;
+      // Prefer denormalized participant details ([{id, name, role}])
+      const details = Array.isArray(selectedConversation.participantDetails)
+        ? selectedConversation.participantDetails : [];
+      const detailMatch = details.find(p => p && String(p.id) !== String(myUserId));
+      if (detailMatch) return detailMatch.id;
       // For existing conversations, the other participant
       if (selectedConversation.participants) {
-        const otherId = selectedConversation.participants.find(id => id !== user?.uid);
+        const otherId = selectedConversation.participants.find(id => String(id) !== String(myUserId));
         if (otherId) return otherId;
       }
       // For new conversations, extract from the id (format: new-{userId})
@@ -2547,7 +2557,7 @@ const InstitutionCaregiverDashboard = () => {
         return;
       }
 
-      const callerId = userProfile?.id || userProfile?.uid || user?.uid;
+      const callerId = myUserId;
       if (!callerId) {
         toast.error('User not authenticated');
         return;
@@ -2686,14 +2696,14 @@ const InstitutionCaregiverDashboard = () => {
     const existingConversationUserIds = new Set(
       conversations
         .filter(c => c.conversationId || (!c.isNew && c.id && !String(c.id).startsWith('new-')))
-        .flatMap(c => (c.participants || []).filter(id => id !== user?.uid))
+        .flatMap(c => (c.participants || []).filter(id => String(id) !== String(myUserId)))
     );
 
     const realConversations = conversations.filter(c => c.conversationId || (!c.isNew && c.id && !String(c.id).startsWith('new-')));
 
     // Build "start a conversation" entries for tenant members without one
     const starterEntries = platformUsers
-      .filter(u => u.id && u.id !== user?.uid && !existingConversationUserIds.has(u.id))
+      .filter(u => u.id && String(u.id) !== String(myUserId) && !existingConversationUserIds.has(u.id))
       .map(u => ({
         id: `new-${u.id}`,
         name: u.name || u.displayName || u.email || 'Unknown User',
@@ -2703,7 +2713,7 @@ const InstitutionCaregiverDashboard = () => {
         timestamp: new Date().toISOString(),
         unread: 0,
         type: u.role || u.userType || u.type || 'user',
-        participants: [user?.uid, u.id],
+        participants: [myUserId, u.id],
         isNew: true,
         userData: u,
       }));
@@ -2712,7 +2722,7 @@ const InstitutionCaregiverDashboard = () => {
 
     // Build tenant member list — all users within the tenant
     const tenantMembers = platformUsers
-      .filter(u => u.id && u.id !== user?.uid) // exclude self
+      .filter(u => u.id && String(u.id) !== String(myUserId)) // exclude self
       .map(u => ({
         id: u.id,
         name: u.name || u.displayName || u.email || 'Unknown',
@@ -2726,7 +2736,7 @@ const InstitutionCaregiverDashboard = () => {
 
       // Check if a conversation already exists with this member
       const existing = conversations.find(
-        c => c.participants && c.participants.includes(member.id) && c.participants.includes(user.uid)
+        c => c.participants && c.participants.includes(member.id) && c.participants.includes(myUserId)
       );
 
       if (existing) {
@@ -3148,7 +3158,7 @@ const InstitutionCaregiverDashboard = () => {
                           </div>
                         ) : (
                           messages.map((message) => {
-                            const isSentByMe = (message.senderId || message.sender) === user?.uid;
+                            const isSentByMe = String(message.senderId || message.sender) === String(myUserId);
                             const messageTime = message.createdAt || message.timestamp;
 
                             return (

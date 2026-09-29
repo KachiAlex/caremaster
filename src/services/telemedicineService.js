@@ -126,8 +126,9 @@ class TelemedicineService {
     });
   }
 
-  // Join channel
-  async joinChannel(uid = null, channelName = null) {
+  // Join channel — options.video=false produces an audio-only call
+  async joinChannel(uid = null, channelName = null, options = {}) {
+    const wantsVideo = options.video !== false;
     try {
       if (!this.isInitialized) {
         await this.initialize();
@@ -150,9 +151,31 @@ class TelemedicineService {
         throw new Error('Channel name is required');
       }
 
-      // Generate fresh token for this session
+      // Generate fresh token for this session — the server may assign the uid
       console.log('🔑 Generating Agora token for channel:', channel);
       const token = await agoraTokenService.generateToken(channel, finalUid, 'publisher');
+      const joinUid = agoraTokenService.lastAssignedUid || finalUid;
+      this.config.uid = joinUid;
+      this.audioOnly = !wantsVideo;
+      
+      // Join the channel with fresh token
+      await this.client.join(
+        this.config.appId,
+        channel,
+        token,
+        joinUid
+      );
+
+      this.isJoined = true;
+      console.log("Successfully joined channel:", channel);
+
+      // Create and publish local tracks
+      await this.createLocalTracks({ video: wantsVideo });
+      await this.publishLocalTracks();
+
+      this.triggerEvent('joined', { uid: joinUid, channel });
+      return joinUid;
+    } catch (error) {
       
       // Join the channel with fresh token
       await this.client.join(
@@ -182,24 +205,25 @@ class TelemedicineService {
           const channel = channelName || this.config.channel;
           const finalUid = uid || Math.floor(Math.random() * 100000);
           const newToken = await agoraTokenService.refreshToken(channel, finalUid, 'publisher');
+          const retryUid = agoraTokenService.lastAssignedUid || finalUid;
           
           await this.client.join(
             this.config.appId,
             channel,
             newToken,
-            finalUid
+            retryUid
           );
           
           this.isJoined = true;
-          this.config.uid = finalUid;
+          this.config.uid = retryUid;
           console.log("✅ Successfully joined channel after token refresh:", channel);
           
           // Create and publish local tracks
-          await this.createLocalTracks();
+          await this.createLocalTracks({ video: wantsVideo });
           await this.publishLocalTracks();
           
-          this.triggerEvent('joined', { uid: finalUid, channel });
-          return finalUid;
+          this.triggerEvent('joined', { uid: retryUid, channel });
+          return retryUid;
         } catch (retryError) {
           console.error("Failed to join even after token refresh:", retryError);
         }
@@ -214,18 +238,19 @@ class TelemedicineService {
     }
   }
 
-  // Create local video and audio tracks
-  async createLocalTracks() {
+  // Create local video and audio tracks (audio-only when options.video=false)
+  async createLocalTracks(options = {}) {
+    const wantsVideo = options.video !== false;
     try {
       // Check for media permissions first
-      const hasCamera = await this.checkCameraPermission();
+      const hasCamera = wantsVideo ? await this.checkCameraPermission() : false;
       const hasMicrophone = await this.checkMicrophonePermission();
 
-      if (!hasCamera && !hasMicrophone) {
-        throw new Error('Camera and microphone access are required for video calls');
+      if (!hasMicrophone && !hasCamera) {
+        throw new Error('Microphone access is required for calls');
       }
 
-      // Create video track if camera is available
+      // Create video track if camera is available and wanted
       if (hasCamera) {
         this.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
           encoderConfig: "720p_1"

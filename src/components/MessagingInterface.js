@@ -170,12 +170,33 @@ const MessagingInterface = () => {
     }
   };
 
+  // Other participant of a 1:1 conversation — participants are stored as id
+  // strings; names/roles come from the denormalized participantDetails array.
+  const getOtherParticipant = (conversation) => {
+    if (!conversation || !userProfile) return null;
+    const otherId = (conversation.participants || [])
+      .map(p => (typeof p === 'object' ? p?.id : p))
+      .find(id => String(id) !== String(userProfile.id));
+    if (!otherId) return null;
+    const detail = (conversation.participantDetails || [])
+      .find(p => String(p.id) === String(otherId));
+    return {
+      id: otherId,
+      name: detail?.name || 'Unknown User',
+      role: detail?.role || '',
+      ...detail,
+    };
+  };
+
   // Handle voice call
   const handleVoiceCall = async () => {
     if (!selectedConversation || !userProfile) return;
 
-    const participant = selectedConversation.participants.find(p => p.id !== userProfile.id);
-    if (!participant) return;
+    const participant = getOtherParticipant(selectedConversation);
+    if (!participant?.id) {
+      toast.error('No participant available to call');
+      return;
+    }
 
     try {
       const result = await callService.initiateCall(
@@ -188,7 +209,7 @@ const MessagingInterface = () => {
         setActiveCall({
           callId: result.callId,
           participantId: participant.id,
-          participantName: participant.name || participant.displayName,
+          participantName: participant.name,
           callType: 'audio'
         });
       } else {
@@ -204,8 +225,11 @@ const MessagingInterface = () => {
   const handleVideoCall = async () => {
     if (!selectedConversation || !userProfile) return;
 
-    const participant = selectedConversation.participants.find(p => p.id !== userProfile.id);
-    if (!participant) return;
+    const participant = getOtherParticipant(selectedConversation);
+    if (!participant?.id) {
+      toast.error('No participant available to call');
+      return;
+    }
 
     try {
       const result = await callService.initiateCall(
@@ -218,7 +242,7 @@ const MessagingInterface = () => {
         setActiveCall({
           callId: result.callId,
           participantId: participant.id,
-          participantName: participant.name || participant.displayName,
+          participantName: participant.name,
           callType: 'video'
         });
       } else {
@@ -319,22 +343,19 @@ const MessagingInterface = () => {
   };
 
   const filteredConversations = conversations.filter(conversation => {
+    const otherName = getOtherParticipant(conversation)?.name || '';
     const matchesSearch = conversation.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         conversation.participants.some(p => p.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+                         otherName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filterType === 'all' || conversation.conversationType === filterType;
     return matchesSearch && matchesFilter;
   });
 
   const getParticipantName = (conversation) => {
-    if (!conversation.participants) return 'Unknown';
-    const otherParticipant = conversation.participants.find(p => p.id !== userProfile.id);
-    return otherParticipant?.name || otherParticipant?.displayName || 'Unknown User';
+    return getOtherParticipant(conversation)?.name || 'Unknown User';
   };
 
   const getParticipantRole = (conversation) => {
-    if (!conversation.participants) return '';
-    const otherParticipant = conversation.participants.find(p => p.id !== userProfile.id);
-    return otherParticipant?.role || '';
+    return getOtherParticipant(conversation)?.role || '';
   };
 
   if (loading) {

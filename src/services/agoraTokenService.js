@@ -44,12 +44,15 @@ class AgoraTokenService {
    */
   async callTokenServer(channelName, uid, role) {
     const tokenEndpoint = process.env.REACT_APP_AGORA_TOKEN_ENDPOINT || '/api/agora/token';
-    
+
+    const headers = { 'Content-Type': 'application/json' };
+    const authToken = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
     const response = await fetch(tokenEndpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
       body: JSON.stringify({
         channelName,
         uid,
@@ -62,7 +65,12 @@ class AgoraTokenService {
       throw new Error(`Token server responded with status: ${response.status}`);
     }
 
-    return await response.json();
+    const json = await response.json();
+    // Server may mint a uid for us — adopt it so the join uses the token's uid
+    if (json.uid && json.uid !== uid) {
+      this.lastAssignedUid = json.uid;
+    }
+    return json;
   }
 
   /**

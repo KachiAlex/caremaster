@@ -17,6 +17,7 @@ const turnRoutes = require('./routes/turn');
 const emailRoutes = require('./routes/email');
 const uploadRoutes = require('./routes/uploadRoutes');
 const sseRoutes = require('./routes/sse');
+const agoraRoutes = require('./routes/agora');
 const notificationPrefRoutes = require('./routes/notificationPreferences');
 const pushRoutes = require('./routes/push');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -98,6 +99,7 @@ app.use('/api/turn-credentials', turnRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/events', sseRoutes);
+app.use('/api/agora', agoraRoutes);
 app.use('/api/notifications', notificationPrefRoutes);
 app.use('/api/push', pushRoutes);
 

@@ -60,11 +60,17 @@ const CallInterface = ({
   const audioRef = useRef(null);
   const callDurationInterval = useRef(null);
 
-  // Update call state when external state changes
+  // Update call state when external state changes — the parent's WebRTC
+  // service fires these, so we also manage the call timer here.
   useEffect(() => {
     if (externalCallState && externalCallState !== callState) {
       console.log('📡 Updating call state from external:', externalCallState);
       setCallState(externalCallState);
+      if (externalCallState === 'connected') {
+        startCallTimer();
+      } else if (externalCallState === 'ended') {
+        stopCallTimer();
+      }
     }
   }, [externalCallState]);
 
@@ -86,17 +92,20 @@ const CallInterface = ({
     if (remoteStream) {
       console.log('🔊 Connecting remote stream to audio/video elements');
 
+      // 'audio' and 'voice' are both used by callers for voice-only calls
+      const isVoiceCall = callType === 'voice' || callType === 'audio';
+
       // Apply saved audio output device (speaker) if supported
       const savedDevices = getSavedDevices();
       if (savedDevices.audioOutput) {
-        const targetEl = callType === 'voice' ? audioRef.current : remoteVideoRef.current;
+        const targetEl = isVoiceCall ? audioRef.current : remoteVideoRef.current;
         if (targetEl) {
           setOutputDevice(targetEl, savedDevices.audioOutput).catch(() => {});
         }
       }
 
       // For voice calls, connect to audio element
-      if (audioRef.current && callType === 'voice') {
+      if (audioRef.current && isVoiceCall) {
         audioRef.current.srcObject = remoteStream;
         audioRef.current.play().catch(err => console.error('Audio playback error:', err));
         console.log('✅ Remote audio connected');
@@ -299,13 +308,19 @@ const CallInterface = ({
   };
 
   const handleAcceptCall = async () => {
-    if (webrtcService && isIncoming) {
-      setCallState('connecting');
-      // TODO: callId should come from the incoming call event; using the prop when available
+    if (!isIncoming) return;
+    setCallState('connecting');
+    // When the parent owns the WebRTC service it answers in onCallAccepted —
+    // answering here too would create a second peer connection responding to
+    // the same offer. Only self-answer when we have our own service AND no
+    // accept handler was provided.
+    if (externalWebrtcService) {
+      await externalWebrtcService.answerCall(callId, callType);
+      onCallAccepted?.();
+    } else if (onCallAccepted) {
+      onCallAccepted();
+    } else if (webrtcService) {
       await webrtcService.answerCall(callId, callType);
-      if (onCallAccepted) {
-        onCallAccepted();
-      }
     }
   };
 

@@ -670,7 +670,7 @@ function AppContent({
         <Route index element={<CaregiverDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
         <Route path="tasks" element={<CaregiverTasks />} />
-        <Route path="messages" element={<CaregiverMessages />} />
+        <Route path="messages" element={<EnhancedMessagingInterface />} />
         <Route path="navigation" element={<CaregiverNavigation />} />
         <Route path="photos" element={<CaregiverPhotos />} />
         <Route path="performance" element={<CaregiverPerformance />} />
@@ -694,6 +694,7 @@ function AppContent({
         <Route path="medical-records" element={<CaregiverClients />} />
         <Route path="prescriptions" element={<Medications />} />
         <Route path="consultations" element={<Consultation />} />
+        <Route path="telemedicine" element={<Telemedicine />} />
         <Route path="diagnostics" element={<VitalSigns />} />
         <Route path="emergency" element={<CaregiverEmergency />} />
         <Route path="settings" element={<CaregiverSettings />} />
