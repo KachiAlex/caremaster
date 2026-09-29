@@ -37,6 +37,34 @@ const PRIORITY = {
 };
 
 /**
+ * Resolve the correct in-app destination for a message notification based on
+ * the RECIPIENT's role. The generic '/messages' is the client portal route —
+ * staff get bounced out of it, so they need their own messaging surfaces.
+ * The resolved URL is stored in the notification and sent in the web-push
+ * payload so both in-app clicks and OS-notification taps land correctly.
+ */
+function resolveMessageNavigateTo(user, metadata) {
+  const convId = metadata?.conversationId;
+  const role = user?.user_type;
+  const instId = user?.institution_id;
+  const staffRoles = ['caregiver', 'doctor', 'nurse', 'pharmacist'];
+  const adminRoles = ['admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin'];
+
+  if (staffRoles.includes(role)) {
+    if (instId) {
+      return `/institution-caregiver/dashboard?institution=${instId}&tab=messages${convId ? `&conversation=${convId}` : ''}`;
+    }
+    return `/service-provider/messages${convId ? `?conversation=${convId}` : ''}`;
+  }
+  if (adminRoles.includes(role)) {
+    return instId
+      ? `/institution-admin/dashboard?institution=${instId}&tab=messages${convId ? `&conversation=${convId}` : ''}`
+      : '/admin';
+  }
+  return `/messages${convId ? `?conversation=${convId}` : ''}`;
+}
+
+/**
  * Insert a notification row for a single user.
  */
 async function createNotification(userId, data) {
@@ -49,6 +77,14 @@ async function createNotification(userId, data) {
   }
 
   try {
+    let metadata = data.metadata;
+    // Message notifications carry a generic '/messages' destination —
+    // rewrite it for the recipient's role before storing/pushing.
+    if (data.type === TYPE.MESSAGE && metadata?.navigateTo) {
+      const recipient = await getUserById(userId);
+      metadata = { ...metadata, navigateTo: resolveMessageNavigateTo(recipient, metadata) };
+    }
+
     const [row] = await db('notifications').insert({
       user_id: String(userId),
       title: data.title || 'Notification',
@@ -56,7 +92,7 @@ async function createNotification(userId, data) {
       type: data.type || TYPE.SYSTEM,
       priority: data.priority || 'normal',
       read: false,
-      data: data.metadata ? JSON.stringify(data.metadata) : null,
+      data: metadata ? JSON.stringify(metadata) : null,
       institution_id: data.institutionId || null,
       created_at: new Date(),
       read_at: null,
@@ -72,7 +108,8 @@ async function createNotification(userId, data) {
         priority,
         data: {
           notificationId: row?.id,
-          navigateTo: data.metadata?.navigateTo,
+          navigateTo: metadata?.navigateTo,
+          conversationId: metadata?.conversationId,
         },
       }).catch(() => {}); // Non-blocking — don't fail the request if push fails
     }

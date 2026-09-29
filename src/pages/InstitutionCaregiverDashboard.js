@@ -540,11 +540,12 @@ const InstitutionCaregiverDashboard = () => {
 
   // Deep-link support: ?tab=<tabId> opens a specific tab (e.g. from a
   // notification), and &conversation=<id> auto-selects that conversation.
+  // Deps on searchParams — navigating within the dashboard only changes the
+  // query string, it does not remount the component.
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab) setActiveTab(tab);
-    // eslint-disable-next-line
-  }, []);
+  }, [searchParams]);
   const deepLinkedConversationRef = React.useRef(null);
   useEffect(() => {
     const convParam = searchParams.get('conversation');
@@ -2480,13 +2481,18 @@ const InstitutionCaregiverDashboard = () => {
 
   useEffect(() => {
     if (activeTab !== 'messages') return;
-    
+
     if (isMobileMessagingView) {
-      setShowMobileChatPane(false);
+      // Don't collapse the chat pane when a notification deep-linked us
+      // straight into a conversation — the deep-link effect already opened it.
+      if (!searchParams.get('conversation')) {
+        setShowMobileChatPane(false);
+      }
       setIsConversationListCollapsed(false);
     } else {
       setShowMobileChatPane(true);
     }
+    // eslint-disable-next-line
   }, [activeTab, isMobileMessagingView]);
 
   useEffect(() => {
