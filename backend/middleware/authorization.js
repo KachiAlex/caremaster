@@ -558,6 +558,7 @@ async function canModifyRecord(user, tableName, record) {
       case 'conversations':
         return isConversationParticipant(record, identityIds);
       case 'messages': {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(record.conversation_id))) return false;
         const conv = await db('conversations').where({ id: record.conversation_id }).first();
         return !!conv && isConversationParticipant(conv, identityIds);
       }
@@ -572,7 +573,9 @@ async function canModifyRecord(user, tableName, record) {
         // appointment's client + doctor rather than a calls row.
         if (String(record.call_id || '').startsWith('consult_')) {
           const apptId = String(record.call_id).slice('consult_'.length);
-          const appt = await db('telemedicine_appointments').where({ id: apptId }).first();
+          const appt = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apptId)
+            ? await db('telemedicine_appointments').where({ id: apptId }).first()
+            : null;
           return !!appt && (identityIds.includes(String(appt.client_id)) ||
             identityIds.includes(String(appt.doctor_id)));
         }
