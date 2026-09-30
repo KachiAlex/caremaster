@@ -499,55 +499,8 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       }
     }
 
-    // ─── Successful login: reset failed attempt counter ───
-    if (user.failed_login_count > 0 || user.locked_until) {
-      await db('users').where({ id: user.id }).update({
-        failed_login_count: 0,
-        locked_until: null,
-      });
-    }
-
-    // Update last login
-    await db('users')
-      .where({ id: user.id })
-      .update({ last_login: new Date() });
-
-    // Generate JWT token (sessionId is added after session creation below)
-    let token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        user_type: user.user_type
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-    );
-
-    // Record successful login attempt
-    await db('login_attempts').insert({
-      email: user.email,
-      user_id: user.id,
-      institution_id: user.institution_id,
-      ip_address: req.ip,
-      user_agent: req.get('User-Agent'),
-      success: true,
-      timestamp: new Date()
-    });
-
-    // Log to security audit log
-    await db('security_audit_logs').insert({
-      user_id: user.id,
-      user_role: user.user_type,
-      action: 'login',
-      resource_type: 'user',
-      resource_id: user.id,
-      ip_address: req.ip,
-      user_agent: req.get('User-Agent'),
-      institution_id: user.institution_id,
-      timestamp: new Date()
-    });
-
-    // Create a new active session for the user
+    // Create a new active session for the user — must complete before the
+    // JWT is signed because sessionId is embedded in the token.
     await db('user_sessions')
       .where({ user_id: user.id, active: true })
       .update({ active: false, ended_at: new Date() });
@@ -564,33 +517,9 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       })
       .returning('*');
 
-    // Ensure a two-factor auth row exists for the user
-    await db('two_factor_auth')
-      .insert({
-        id: user.id,
-        user_id: user.id,
-        email: user.email,
-        enabled: false
-      })
-      .onConflict('id')
-      .merge(['email']);
-
-    // Log session creation
-    await db('security_audit_logs').insert({
-      user_id: user.id,
-      user_role: user.user_type,
-      action: 'session_created',
-      resource_type: 'session',
-      resource_id: session.id,
-      ip_address: req.ip,
-      user_agent: req.get('User-Agent'),
-      institution_id: user.institution_id,
-      timestamp: new Date()
-    });
-
-    // Re-issue token with sessionId embedded so the auth middleware
-    // can enforce session validity (logout invalidation, expiry checks)
-    token = jwt.sign(
+    // Token carries the sessionId so the auth middleware can enforce
+    // session validity (logout invalidation, expiry checks)
+    const token = jwt.sign(
       {
         userId: user.id,
         email: user.email,
@@ -601,15 +530,40 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
-    // Legacy audit log
-    await db('audit_logs').insert({
-      user_id: user.id,
-      action: 'login',
-      resource_type: 'user',
-      resource_id: user.id,
-      ip_address: req.ip,
-      user_agent: req.get('User-Agent')
-    });
+    // Institution license status — include in the login response so the
+    // frontend doesn't need a second round-trip before redirecting.
+    let licenseStatus = null;
+    if (user.institution_id) {
+      try {
+        const [license] = await db('licenses')
+          .where({ institution_id: user.institution_id })
+          .orderBy('ends_at', 'desc')
+          .limit(1);
+
+        if (!license) {
+          licenseStatus = { active: false, reason: 'no_license' };
+        } else {
+          const now = new Date();
+          const startDate = new Date(license.starts_at);
+          const endDate = new Date(license.ends_at);
+          const isActive = license.active === true && startDate <= now && endDate >= now;
+
+          let reason = 'inactive';
+          if (license.active !== true) {
+            reason = license.suspended_at ? 'license_suspended' : 'license_inactive';
+          } else if (endDate < now) {
+            reason = 'license_expired';
+          } else if (startDate > now) {
+            reason = 'license_not_started';
+          }
+          licenseStatus = { active: isActive, reason: isActive ? 'active' : reason };
+        }
+      } catch (licenseErr) {
+        // Don't fail login on a license lookup error — frontend falls back
+        // to its own check when license is absent from the response.
+        logger.warn(`License lookup failed during login for ${user.email}:`, licenseErr);
+      }
+    }
 
     logger.info(`User logged in via email: ${user.email}`);
 
@@ -685,9 +639,70 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
         // Only expose the token in the response body for native/Capacitor clients
         // that cannot read the httpOnly cookie. Web clients use the cookie.
         ...(isNativeClient ? { token } : {}),
-        user: userProfile
+        user: userProfile,
+        license: licenseStatus
       }
     });
+
+    // Post-response bookkeeping — audit trails, counters, 2FA row. None of
+    // this gates the response, so it runs in the background; failures are
+    // logged but never block or fail the login.
+    Promise.allSettled([
+      db('users').where({ id: user.id }).update({
+        failed_login_count: 0,
+        locked_until: null,
+        last_login: new Date()
+      }),
+      db('login_attempts').insert({
+        email: user.email,
+        user_id: user.id,
+        institution_id: user.institution_id,
+        ip_address: req.ip,
+        user_agent: req.get('User-Agent'),
+        success: true,
+        timestamp: new Date()
+      }),
+      db('security_audit_logs').insert({
+        user_id: user.id,
+        user_role: user.user_type,
+        action: 'login',
+        resource_type: 'user',
+        resource_id: user.id,
+        ip_address: req.ip,
+        user_agent: req.get('User-Agent'),
+        institution_id: user.institution_id,
+        timestamp: new Date()
+      }),
+      db('security_audit_logs').insert({
+        user_id: user.id,
+        user_role: user.user_type,
+        action: 'session_created',
+        resource_type: 'session',
+        resource_id: session.id,
+        ip_address: req.ip,
+        user_agent: req.get('User-Agent'),
+        institution_id: user.institution_id,
+        timestamp: new Date()
+      }),
+      db('audit_logs').insert({
+        user_id: user.id,
+        action: 'login',
+        resource_type: 'user',
+        resource_id: user.id,
+        ip_address: req.ip,
+        user_agent: req.get('User-Agent')
+      }),
+      db('two_factor_auth')
+        .insert({ id: user.id, user_id: user.id, email: user.email, enabled: false })
+        .onConflict('id')
+        .merge(['email']),
+    ]).then((results) => {
+      results.forEach((r) => {
+        if (r.status === 'rejected') {
+          logger.warn(`Post-login bookkeeping failed for ${user.email}:`, r.reason);
+        }
+      });
+    }).catch(() => {});
 
   } catch (error) {
     logger.error('Email login error:', error);
