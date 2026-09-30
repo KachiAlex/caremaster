@@ -322,6 +322,35 @@ function filterWritableFields(table, data) {
   return filtered;
 }
 
+// Cache of real DB columns per table. Whitelisted fields that don't exist in
+// the schema (e.g. sender_name on messages) would otherwise crash the insert
+// with "column does not exist" — drop them instead.
+const tableColumnsCache = new Map();
+async function getTableColumns(tableName) {
+  if (tableColumnsCache.has(tableName)) return tableColumnsCache.get(tableName);
+  try {
+    const result = await db.raw(
+      `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ?`,
+      [tableName]
+    );
+    const cols = new Set((result.rows || []).map(r => r.column_name));
+    tableColumnsCache.set(tableName, cols);
+    return cols;
+  } catch {
+    return null; // fail open — surface the real DB error if the schema read fails
+  }
+}
+
+async function dropUnknownColumns(tableName, data) {
+  const cols = await getTableColumns(tableName);
+  if (!cols) return data;
+  const out = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (cols.has(k)) out[k] = v;
+  }
+  return out;
+}
+
 // Normalize rich frontend payloads into the actual care_logs columns before
 // whitelisting. The client sends logDate/logTime/observations/activityDescription/
 // vitals/photos — none of which are real columns. Previously they were silently
@@ -1148,6 +1177,8 @@ router.post('/:table', async (req, res) => {
       data.receiver_id = data.recipient_id;
     }
 
+    data = await dropUnknownColumns(tableName, data);
+
     const [record] = await db(tableName).insert(data).returning('*');
 
     // Bump the parent conversation's last-message fields server-side so the
@@ -1214,9 +1245,10 @@ router.put('/:table/:id', async (req, res) => {
       return res.status(403).json({ success: false, message: access.reason });
     }
 
-    const data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body, tableName)));
+    let data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body, tableName)));
     delete data.id;
     delete data.created_at;
+    data = await dropUnknownColumns(tableName, data);
 
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ success: false, message: 'No valid fields to update' });
@@ -1425,10 +1457,17 @@ router.post('/:table/bulk', async (req, res) => {
     const inserted = [];
     const failed = [];
 
+    const tableCols = await getTableColumns(tableName);
+
     for (const r of records) {
       try {
-        const data = filterWritableFields(tableName, mapToSnakeCase(r));
+        let data = filterWritableFields(tableName, mapToSnakeCase(r));
         delete data.id;
+        if (tableCols) {
+          for (const k of Object.keys(data)) {
+            if (!tableCols.has(k)) delete data[k];
+          }
+        }
 
         if (Object.keys(data).length === 0) {
           failed.push({ record: r, error: 'No valid fields' });

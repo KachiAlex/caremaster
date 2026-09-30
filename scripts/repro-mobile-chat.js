@@ -104,12 +104,26 @@ const { chromium } = require('playwright');
   const listVisible = await page.locator('text=/\\d+ conversation/').isVisible().catch(() => false);
   console.log('   RESULT: backBtn=', backBtn, 'composer=', composer, 'listStillVisible=', listVisible);
 
+  // Send a test message if the chat opened
+  if (composer) {
+    console.log('6. Sending a test message...');
+    const msgInput = page.locator('input[placeholder*="message" i], textarea[placeholder*="message" i]').first();
+    await msgInput.fill('Test ping ' + Date.now());
+    const sendBtn = page.locator('button:has-text("Send"), button[type="submit"]').first();
+    await sendBtn.click().catch(() => msgInput.press('Enter'));
+    await page.waitForTimeout(4000);
+    const toast = await page.locator('text=/Failed to send/i').isVisible().catch(() => false);
+    const sent = await page.locator('text=/Test ping/').isVisible().catch(() => false);
+    await page.screenshot({ path: 'repro-6-sent.png' });
+    console.log('   RESULT: sent visible=', sent, 'failToast=', toast);
+  }
+
   // Verify back button returns to list
   if (backBtn) {
     await page.locator('button[aria-label="Back to conversations"]').tap();
     await page.waitForTimeout(1500);
     const listBack = await page.locator('text=/\\d+ conversation/').isVisible().catch(() => false);
-    await page.screenshot({ path: 'repro-6-back.png' });
+    await page.screenshot({ path: 'repro-7-back.png' });
     console.log('   after back: listVisible=', listBack);
   }
 
