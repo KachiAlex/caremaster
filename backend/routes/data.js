@@ -402,17 +402,20 @@ function normalizeInsertData(tableName, data) {
  * users.firebase_uid, or clients.id) to canonical users.id values and
  * build participant_details [{id, name, role}] for display.
  */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function resolveParticipants(participantIds) {
   const unique = [...new Set((participantIds || []).filter(Boolean).map(String))];
   if (unique.length === 0) return { ids: [], details: [] };
 
   const canonicalIds = [];
   for (const pid of unique) {
-    let user = await db('users').where({ id: pid }).first();
+    const isUuid = UUID_RE.test(pid);
+    let user = isUuid ? await db('users').where({ id: pid }).first() : null;
     if (!user) {
       user = await db('users').where({ firebase_uid: pid }).first();
     }
-    if (!user) {
+    if (!user && isUuid) {
       const client = await db('clients').where({ id: pid }).first();
       if (client && client.user_id) {
         user = await db('users').where({ id: client.user_id }).first();
@@ -422,8 +425,10 @@ async function resolveParticipants(participantIds) {
   }
 
   const deduped = [...new Set(canonicalIds)];
-  const users = await db('users').whereIn('id', deduped)
-    .select('id', 'first_name', 'last_name', 'email', 'user_type');
+  const users = deduped.length
+    ? await db('users').whereIn('id', deduped.filter(p => UUID_RE.test(p)))
+        .select('id', 'first_name', 'last_name', 'email', 'user_type')
+    : [];
   const userById = new Map(users.map(u => [String(u.id), u]));
 
   const details = deduped.map(pid => {
@@ -449,9 +454,12 @@ async function normalizeConversationData(data, req) {
       out.participant_details = details;
     }
     if (!out.institution_id) {
-      const inst = await db('users').whereIn('id', ids)
-        .whereNotNull('institution_id').select('institution_id').first();
-      if (inst) out.institution_id = inst.institution_id;
+      const uuidIds = ids.filter(p => UUID_RE.test(p));
+      if (uuidIds.length) {
+        const inst = await db('users').whereIn('id', uuidIds)
+          .whereNotNull('institution_id').select('institution_id').first();
+        if (inst) out.institution_id = inst.institution_id;
+      }
     }
 
     // The creator must be a participant (or an admin within the institution)
@@ -481,7 +489,9 @@ async function normalizeMessageData(data, req) {
   if (!out.conversation_id) {
     return { ok: false, error: 'conversation_id is required' };
   }
-  const conversation = await db('conversations').where({ id: out.conversation_id }).first();
+  const conversation = UUID_RE.test(String(out.conversation_id))
+    ? await db('conversations').where({ id: out.conversation_id }).first()
+    : null;
   if (!conversation) {
     return { ok: false, error: 'Conversation not found' };
   }
