@@ -1,8 +1,8 @@
 // Care Master Service Worker for PWA functionality
 const CACHE_NAME = 'Care Master-v2.4.1';
-const STATIC_CACHE = 'Care Master-static-v59';
-const DYNAMIC_CACHE = 'Care Master-dynamic-v59';
-const API_CACHE = 'Care Master-api-v59';
+const STATIC_CACHE = 'Care Master-static-v60';
+const DYNAMIC_CACHE = 'Care Master-dynamic-v60';
+const API_CACHE = 'Care Master-api-v60';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
@@ -336,35 +336,36 @@ function isHTMLRequest(request) {
 // If offline, serve cached HTML as fallback. Never cache 503/error responses.
 // This prevents stale HTML from referencing non-existent JS chunks after deploy.
 async function htmlNetworkFirst(request) {
+  const fallback = async () => {
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) return cachedResponse;
+    if (new URL(request.url).pathname === '/') {
+      const rootCache = await caches.match('/index.html');
+      if (rootCache) return rootCache;
+    }
+    const offlinePage = await caches.match('/offline.html');
+    if (offlinePage) return offlinePage;
+    return new Response('Care Master is currently offline. Please check your connection.', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' }
+    });
+  };
+
   try {
     const networkResponse = await fetch(request);
     // Only cache successful HTML responses (200)
     if (networkResponse.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, networkResponse.clone()).catch(() => {});
+      return networkResponse;
     }
-    return networkResponse;
+    // Server returned an error (5xx etc.) — serve cached HTML so a
+    // transient backend/proxy hiccup doesn't dead-end the app.
+    console.warn('HTML fetch returned', networkResponse.status, '— serving cached copy');
+    return await fallback();
   } catch (error) {
     console.warn('HTML fetch failed, falling back to cache:', error.message);
-    // Network failed — try ANY cache as fallback for offline support
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    // Specific fallback for root path if '/' is not matched exactly
-    if (new URL(request.url).pathname === '/') {
-      const rootCache = await caches.match('/index.html');
-      if (rootCache) return rootCache;
-    }
-    // No cache available — try offline page
-    const offlinePage = await caches.match('/offline.html');
-    if (offlinePage) {
-      return offlinePage;
-    }
-    return new Response('Care Master is currently offline. Please check your connection.', {
-      status: 503,
-      headers: { 'Content-Type': 'text/plain' }
-    });
+    return await fallback();
   }
 }
 

@@ -96,7 +96,7 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
     },
   });
 
-  const { token, user } = body.data || {};
+  const { token, user, license } = body.data || {};
   // Only keep the token in localStorage for native/Capacitor apps. On web the
   // token lives in an httpOnly cookie and should not be accessible to JS.
   if (token && isNativePlatform()) setToken(token);
@@ -131,6 +131,7 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
 
   return {
     user: authObj.currentUser || buildUserObj({ id: 'unknown', email }) || { uid: user?.id || 'unknown', email, getIdToken: () => Promise.resolve(token) },
+    license,
   };
 }
 

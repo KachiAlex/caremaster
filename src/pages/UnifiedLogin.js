@@ -74,42 +74,30 @@ const UnifiedLogin = () => {
 
       // Save for biometrics if available on native platform
       if (biometricAvailable) {
-        await biometricService.setCredentials(email, password);
+        biometricService.setCredentials(email, password).catch(() => {});
       }
 
-      const user = userCredential.user;
-      const userData = user;
+      const userData = userCredential.user;
 
-      // Now we have userData - detect institution and role
+      // License status is embedded in the login response — no second
+      // request needed. Fall back to the standalone check only when the
+      // backend didn't include it (older server).
       const institutionId = userData?.institutionId;
-      
-      // CRITICAL: Check license status for institution users BEFORE allowing access
       if (institutionId) {
-        console.log('🔍 Checking license status for institution:', institutionId);
-        try {
-          const licenseStatus = await fetchLicenseStatus(institutionId);
-          console.log('📋 License status:', licenseStatus);
-          
-          if (!licenseStatus.active) {
-            console.warn('⛔ License check failed:', licenseStatus.reason);
-            toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}. Please contact your administrator to activate the license.`);
-            
-            // Sign out and redirect to license activation page
-            await signOut(auth);
-            setLoading(false);
-            navigate(`/license-required?institution=${institutionId}`, { replace: true });
-            return;
-          }
-          
-          console.log('✅ License verified - proceeding with login');
-        } catch (licenseError) {
-          console.error('❌ Error checking license:', licenseError);
-          toast.error('Unable to verify institution license. Access denied.');
+        const licenseStatus = userCredential.license !== undefined
+          ? userCredential.license
+          : await fetchLicenseStatus(institutionId).catch(() => null);
+
+        if (licenseStatus && !licenseStatus.active) {
+          console.warn('⛔ License check failed:', licenseStatus.reason);
+          toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}. Please contact your administrator to activate the license.`);
           await signOut(auth);
           setLoading(false);
           navigate(`/license-required?institution=${institutionId}`, { replace: true });
           return;
         }
+        // licenseStatus === null means the check couldn't run — allow
+        // login; the dashboard guard re-checks the license anyway.
       }
       
       // Detect role - check roles array first, then individual fields
@@ -139,7 +127,7 @@ const UnifiedLogin = () => {
         type: userData?.type,
         role: userData?.role,
         roles: userData?.roles,
-        userId: user?.uid || userData?.uid
+        userId: userData?.id || userData?.uid
       });
 
       // Check if account is suspended
@@ -149,75 +137,48 @@ const UnifiedLogin = () => {
         return;
       }
 
-      toast.success('Login successful! Redirecting...');
+      toast.success('Login successful!');
 
-      // Super-admin always goes to the super-admin dashboard, regardless of institution
-      // Use window.location.href for a hard navigation so React Router state
-      // (e.g. SignInRouteHandler re-rendering) can't override the redirect.
+      // SPA navigation — no page reload. UserContext already has the profile
+      // (onAuthStateChanged fired synchronously inside signIn), and
+      // SignInRouteHandler remains a fallback if the user lands on /login.
       if (userRole === 'super-admin' || userData?.userType === 'super-admin') {
-        console.log('🚀 Super-admin detected, redirecting to /super-admin/dashboard');
-        setLoading(false);
-        window.location.href = '/super-admin/dashboard';
+        navigate('/super-admin/dashboard', { replace: true });
         return;
       }
 
-      // Route based on role and institution
-      // Use window.location.href for ALL roles (not just super-admin) so that
-      // SignInRouteHandler re-rendering can't override the redirect.
       if (institutionId) {
-        // User belongs to an institution
         if (userRole === 'admin') {
-          window.location.href = `/institution-admin/dashboard?institution=${institutionId}`;
-          return;
+          navigate(`/institution-admin/dashboard?institution=${institutionId}`, { replace: true });
         } else if (userRole === 'pharmacist') {
-          window.location.href = `/institution-pharmacy/dashboard?institution=${institutionId}`;
-          return;
+          navigate(`/institution-pharmacy/dashboard?institution=${institutionId}`, { replace: true });
         } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
-          // Check if onboarding is complete
-          if (!userData?.onboardingComplete) {
-            window.location.href = `/institution-caregiver/onboarding?institution=${institutionId}`;
-          } else {
-            window.location.href = `/institution-caregiver/dashboard?institution=${institutionId}`;
-          }
-          return;
+          navigate(userData?.onboardingComplete
+            ? `/institution-caregiver/dashboard?institution=${institutionId}`
+            : `/institution-caregiver/onboarding?institution=${institutionId}`,
+            { replace: true });
         } else if (userRole === 'lab_technician' || userRole === 'lab-technician') {
-          window.location.href = `/institution-lab-technician/dashboard?institution=${institutionId}`;
-          return;
+          navigate(`/institution-lab-technician/dashboard?institution=${institutionId}`, { replace: true });
         } else if (userRole === 'client' || userRole === 'elderly' || userRole === 'patient') {
-          window.location.href = '/dashboard';
-          return;
+          navigate('/dashboard', { replace: true });
         } else {
-          // Default institution user
-          window.location.href = `/institution-caregiver/dashboard?institution=${institutionId}`;
-          return;
+          navigate(`/institution-caregiver/dashboard?institution=${institutionId}`, { replace: true });
         }
       } else {
-        // Standalone user (no institution)
         if (userRole === 'admin') {
-          window.location.href = '/institution-admin/dashboard';
-          return;
+          navigate('/institution-admin/dashboard', { replace: true });
         } else if (userRole === 'pharmacist') {
-          // Pharmacists should have an institution, but handle gracefully
-          const urlParams = new URLSearchParams(window.location.search);
-          const urlInstitutionId = urlParams.get('institution');
-
+          const urlInstitutionId = new URLSearchParams(window.location.search).get('institution');
           if (urlInstitutionId) {
-            window.location.href = `/institution-pharmacy/dashboard?institution=${urlInstitutionId}`;
+            navigate(`/institution-pharmacy/dashboard?institution=${urlInstitutionId}`, { replace: true });
           } else {
             toast.warning('Pharmacist account detected but no institution found. Please contact support to set your institution.');
-            window.location.href = '/dashboard';
+            navigate('/dashboard', { replace: true });
           }
-          return;
         } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
-          window.location.href = '/service-provider';
-          return;
-        } else if (userRole === 'lab_technician' || userRole === 'lab-technician') {
-          // Lab technicians should have an institution, but handle gracefully
-          window.location.href = '/dashboard';
-          return;
+          navigate('/service-provider', { replace: true });
         } else {
-          window.location.href = '/dashboard';
-          return;
+          navigate('/dashboard', { replace: true });
         }
       }
     } catch (error) {

@@ -68,7 +68,11 @@ class PushNotificationService {
     try {
       // Check if service worker and push are supported
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.log('Web Push not supported in this browser');
+        return;
+      }
+
+      // Permission already denied — don't prompt or retry, it can't succeed
+      if ('Notification' in window && Notification.permission === 'denied') {
         return;
       }
 
@@ -83,8 +87,7 @@ class PushNotificationService {
         const vapidResponse = await api.get('/push/vapid-public-key');
         const publicKey = vapidResponse.data?.data?.publicKey;
         if (!publicKey) {
-          console.log('VAPID public key not available — push disabled');
-          return;
+          return; // push not configured on this deployment
         }
 
         const applicationServerKey = this.urlBase64ToUint8Array(publicKey);
@@ -92,7 +95,6 @@ class PushNotificationService {
         // Request permission first
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-          console.log('Notification permission denied');
           return;
         }
 
@@ -105,11 +107,16 @@ class PushNotificationService {
 
       this.webSubscription = subscription;
 
-      // Send subscription to backend
-      await api.post('/push/subscribe', { subscription });
-      console.log('Web Push subscription registered with backend');
+      // Send subscription to backend — best effort, push still works
+      // locally even if registration fails
+      try {
+        await api.post('/push/subscribe', { subscription });
+      } catch (subErr) {
+        console.warn('Push subscription not registered with backend:', subErr?.message || subErr);
+      }
     } catch (err) {
-      console.error('Web Push initialization error:', err);
+      // Non-fatal — the app works without push
+      console.warn('Web Push init skipped:', err?.message || err);
     }
   }
 
