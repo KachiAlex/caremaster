@@ -37,6 +37,7 @@ const DEFAULT_PREFERENCES = {
   prescription_updates: true,
   consultation_updates: true,
   care_log_updates: true,
+  email_notifications: true,
   system_updates: false,
 };
 
@@ -154,11 +155,48 @@ async function shouldNotify(userId, notificationType) {
   }
 }
 
+/**
+ * Check whether a user should receive an EMAIL copy of a notification.
+ * Requires both the per-type preference (same gate as shouldNotify) and the
+ * master email_notifications toggle. Returns the user's email + name so the
+ * caller doesn't need a second user lookup; null when suppressed.
+ */
+async function getEmailRecipient(userId, notificationType) {
+  if (!userId || !notificationType) return null;
+
+  try {
+    const user = await db('users').where({ id: String(userId) })
+      .select('email', 'first_name', 'last_name', 'notification_preferences')
+      .first();
+    if (!user?.email) return null;
+
+    const prefs = user.notification_preferences
+      ? (typeof user.notification_preferences === 'string'
+          ? JSON.parse(user.notification_preferences)
+          : user.notification_preferences)
+      : null;
+
+    if (prefs) {
+      if (prefs.email_notifications === false) return null;
+      const prefKey = TYPE_TO_PREFERENCE[notificationType];
+      if (prefKey && prefs[prefKey] === false) return null;
+    }
+
+    return {
+      email: user.email,
+      name: [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || null,
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
 function isAdmin(userType) {
   return ['admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin', 'super-admin', 'superadmin', 'super_admin'].includes(userType);
 }
 
 module.exports = router;
 module.exports.shouldNotify = shouldNotify;
+module.exports.getEmailRecipient = getEmailRecipient;
 module.exports.DEFAULT_PREFERENCES = DEFAULT_PREFERENCES;
 module.exports.TYPE_TO_PREFERENCE = TYPE_TO_PREFERENCE;

@@ -165,6 +165,33 @@ const formatDateForInput = (value) => {
   return `${year}-${month}-${day}`;
 };
 
+// Combine a YYYY-MM-DD date + HH:MM time into a local-timezone Date.
+// Parsing the parts manually avoids the UTC-shift bug from `new Date(str)`.
+const combineDateTime = (dateStr, timeStr) => {
+  if (!dateStr) return null;
+  const parts = String(dateStr).split('-').map(Number);
+  let dt;
+  if (parts.length === 3 && parts.every(n => !Number.isNaN(n))) {
+    dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  } else {
+    dt = new Date(dateStr);
+  }
+  if (Number.isNaN(dt.getTime())) return null;
+  if (timeStr) {
+    const [hh, mm] = String(timeStr).split(':').map(Number);
+    dt.setHours(hh || 0, mm || 0, 0, 0);
+  }
+  return dt;
+};
+
+// Extract the HH:MM portion of a stored date/datetime value for form prefill.
+const formatTimeForInput = (value) => {
+  if (!value) return '';
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+};
+
 // Payment gateway constants removed
 
 const StatCard = ({ icon: Icon, label, value, accent, borderColor }) => (
@@ -292,21 +319,19 @@ const InstitutionAdminDashboard = () => {
   const [assignmentType, setAssignmentType] = useState('client-to-caregiver');
   const [selectedClientForAssignment, setSelectedClientForAssignment] = useState('');
   const [selectedCaregiverForAssignment, setSelectedCaregiverForAssignment] = useState('');
-  const [assignmentForm, setAssignmentForm] = useState({
+  const emptyAssignmentForm = {
     title: '',
     description: '',
     instructions: '',
     priority: 'normal',
+    startDate: '',
+    startTime: '',
     dueDate: '',
     dueTime: ''
-  });
+  };
+  const [assignmentForm, setAssignmentForm] = useState(emptyAssignmentForm);
   const [editAssignmentForm, setEditAssignmentForm] = useState({
-    title: '',
-    description: '',
-    instructions: '',
-    priority: 'normal',
-    dueDate: '',
-    dueTime: '',
+    ...emptyAssignmentForm,
     status: 'pending'
   });
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -1521,6 +1546,14 @@ const InstitutionAdminDashboard = () => {
   // Assignment Functions
   const handleCreateAssignment = async (formData) => {
     try {
+      // Validate the work window — closing must come after resumption
+      const resumeAt = combineDateTime(formData.startDate, formData.startTime);
+      const closeAt = combineDateTime(formData.dueDate, formData.dueTime);
+      if (resumeAt && closeAt && closeAt <= resumeAt) {
+        toast.error('Closing date/time must be after the resumption date/time');
+        return;
+      }
+
       // Get client and caregiver details first
       const client = clients.find(p => p.id === selectedClientForAssignment);
       const caregiver = caregivers.find(c => c.id === selectedCaregiverForAssignment);
@@ -1552,6 +1585,10 @@ const InstitutionAdminDashboard = () => {
         description: formData.description,
         instructions: formData.instructions,
         priority: formData.priority,
+        // Resumption/closing window — start_date/end_date are full datetimes;
+        // due_date/due_time stay for backward-compatible 'Due' displays.
+        startDate: resumeAt ? resumeAt.toISOString() : null,
+        endDate: closeAt ? closeAt.toISOString() : null,
         dueDate: formData.dueDate,
         dueTime: formData.dueTime,
         status: 'pending',
@@ -1565,38 +1602,11 @@ const InstitutionAdminDashboard = () => {
       try {
         const { createCareTask } = await import('../api/careTasksAPI');
         const { Timestamp } = await import('backend/database');
-        
-        // Parse dueDate and dueTime to create scheduledTime (fix timezone issues)
-        let scheduledTime = new Date();
-        if (formData.dueDate) {
-          // Parse date string and create in local timezone to avoid date shifts
-          const dateParts = formData.dueDate.split('-');
-          if (dateParts.length === 3) {
-            const year = parseInt(dateParts[0]);
-            const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
-            const day = parseInt(dateParts[2]);
-            
-            // Create date in local timezone
-            scheduledTime = new Date(year, month, day);
-            
-            if (formData.dueTime) {
-              const [hours, minutes] = formData.dueTime.split(':');
-              scheduledTime.setHours(parseInt(hours) || 9, parseInt(minutes) || 0, 0, 0);
-            } else {
-              scheduledTime.setHours(9, 0, 0, 0); // Default to 9 AM
-            }
-          } else {
-            // Fallback to original method if date format is different
-            scheduledTime = new Date(formData.dueDate);
-            if (formData.dueTime) {
-              const [hours, minutes] = formData.dueTime.split(':');
-              scheduledTime.setHours(parseInt(hours) || 9, parseInt(minutes) || 0, 0, 0);
-            } else {
-              scheduledTime.setHours(9, 0, 0, 0);
-            }
-          }
-        }
-        
+
+        // scheduledTime = resumption (or closing if no resumption given);
+        // dueDate/dueTime carry the closing deadline on the task itself.
+        const scheduledTime = resumeAt || closeAt || new Date();
+
         await createCareTask({
           caregiverId: caregiverUserId, // Use Backend Auth UID
           clientId: selectedClientForAssignment,
@@ -1607,6 +1617,8 @@ const InstitutionAdminDashboard = () => {
           priority: formData.priority || 'normal',
           status: 'pending',
           scheduledTime: Timestamp.fromDate(scheduledTime),
+          dueDate: formData.dueDate || null,
+          dueTime: formData.dueTime || null,
           instructions: formData.instructions,
           assignmentId: createdAssignment.id, // Link to the assignment
           institutionId: institutionId || userProfile?.institutionId
@@ -1632,6 +1644,8 @@ const InstitutionAdminDashboard = () => {
               assignmentId: createdAssignment.id,
               clientId: selectedClientForAssignment,
               clientName: client?.name,
+              startDate: formData.startDate || null,
+              startTime: formData.startTime || null,
               dueDate: formData.dueDate,
               dueTime: formData.dueTime
             },
@@ -1659,6 +1673,8 @@ const InstitutionAdminDashboard = () => {
               assignmentId: createdAssignment.id,
               caregiverId: selectedCaregiverForAssignment,
               caregiverName: caregiver?.name,
+              startDate: formData.startDate || null,
+              startTime: formData.startTime || null,
               dueDate: formData.dueDate,
               dueTime: formData.dueTime
             },
@@ -1704,8 +1720,10 @@ const InstitutionAdminDashboard = () => {
       description: assignment.description || '',
       instructions: assignment.instructions || '',
       priority: assignment.priority || 'normal',
-      dueDate: formatDateForInput(assignment.dueDate || assignment.dueAt),
-      dueTime: assignment.dueTime || '',
+      startDate: formatDateForInput(assignment.startDate),
+      startTime: formatTimeForInput(assignment.startDate),
+      dueDate: formatDateForInput(assignment.endDate || assignment.dueDate || assignment.dueAt),
+      dueTime: assignment.endDate ? formatTimeForInput(assignment.endDate) : (assignment.dueTime || ''),
       status: assignment.status || 'pending'
     });
     setShowEditAssignmentModal(true);
@@ -1734,12 +1752,22 @@ const InstitutionAdminDashboard = () => {
       return;
     }
 
+    // Closing must come after resumption when both are set
+    const resumeAt = combineDateTime(formData.startDate, formData.startTime);
+    const closeAt = combineDateTime(formData.dueDate, formData.dueTime);
+    if (resumeAt && closeAt && closeAt <= resumeAt) {
+      toast.error('Closing date/time must be after the resumption date/time');
+      return;
+    }
+
     try {
       await assignmentAPI.updateAssignment(assignmentId, {
         title: formData.title,
         description: formData.description,
         instructions: formData.instructions,
         priority: formData.priority,
+        startDate: resumeAt ? resumeAt.toISOString() : null,
+        endDate: closeAt ? closeAt.toISOString() : null,
         dueDate: formData.dueDate || null,
         dueTime: formData.dueTime || '',
         status: formData.status || selectedAssignmentForEdit.status
@@ -1748,15 +1776,7 @@ const InstitutionAdminDashboard = () => {
       toast.success('Assignment updated');
       setShowEditAssignmentModal(false);
       setSelectedAssignmentForEdit(null);
-      setEditAssignmentForm({
-        title: '',
-        description: '',
-        instructions: '',
-        priority: 'normal',
-        dueDate: '',
-        dueTime: '',
-        status: 'pending'
-      });
+      setEditAssignmentForm({ ...emptyAssignmentForm, status: 'pending' });
       await loadDashboardData();
     } catch (error) {
       console.error('Error updating assignment:', error);
@@ -4983,22 +5003,49 @@ const renderMessagesTab = () => {
                 </div>
               </div>
 
-              {/* Date & Time */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs uppercase text-gray-500 mb-2">Due Date & Time</p>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatDateValue(selectedAssignment.dueDate || selectedAssignment.dueAt) || 'Not specified'}
-                    </span>
-                  </div>
-                  {selectedAssignment.dueTime && (
+              {/* Resumption & Closing */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div>
+                  <p className="text-xs uppercase text-gray-500 mb-2">Resumption</p>
+                  <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-900">{selectedAssignment.dueTime}</span>
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {formatDateValue(selectedAssignment.startDate) !== '—'
+                          ? formatDateValue(selectedAssignment.startDate)
+                          : 'Not specified'}
+                      </span>
                     </div>
-                  )}
+                    {selectedAssignment.startDate && formatTimeForInput(selectedAssignment.startDate) !== '00:00' && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {formatTimeForInput(selectedAssignment.startDate)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500 mb-2">Closing</p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {formatDateValue(selectedAssignment.endDate || selectedAssignment.dueDate || selectedAssignment.dueAt) || 'Not specified'}
+                      </span>
+                    </div>
+                    {(selectedAssignment.endDate || selectedAssignment.dueTime) && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {selectedAssignment.endDate
+                            ? formatTimeForInput(selectedAssignment.endDate)
+                            : selectedAssignment.dueTime}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -5120,14 +5167,7 @@ const renderMessagesTab = () => {
               <button
                 onClick={() => {
                   setShowAssignmentModal(false);
-                  setAssignmentForm({
-                    title: '',
-                    description: '',
-                    instructions: '',
-                    priority: 'normal',
-                    dueDate: '',
-                    dueTime: ''
-                  });
+                  setAssignmentForm(emptyAssignmentForm);
                   setSelectedClientForAssignment('');
                   setSelectedCaregiverForAssignment('');
                 }}
@@ -5136,7 +5176,7 @@ const renderMessagesTab = () => {
                 <X className="h-5 w-5 text-gray-600" />
               </button>
             </div>
-            
+
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -5145,14 +5185,7 @@ const renderMessagesTab = () => {
                   return;
                 }
                 await handleCreateAssignment(assignmentForm);
-                setAssignmentForm({
-                  title: '',
-                  description: '',
-                  instructions: '',
-                  priority: 'normal',
-                  dueDate: '',
-                  dueTime: ''
-                });
+                setAssignmentForm(emptyAssignmentForm);
                 setSelectedClientForAssignment('');
                 setSelectedCaregiverForAssignment('');
               }}
@@ -5251,10 +5284,32 @@ const renderMessagesTab = () => {
                 </select>
               </div>
 
-              {/* Due Date and Time */}
+              {/* Resumption Date and Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Due Date</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Resumption Date</label>
+                  <input
+                    type="date"
+                    value={assignmentForm.startDate}
+                    onChange={(e) => setAssignmentForm({ ...assignmentForm, startDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Resumption Time</label>
+                  <input
+                    type="time"
+                    value={assignmentForm.startTime}
+                    onChange={(e) => setAssignmentForm({ ...assignmentForm, startTime: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Closing Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Closing Date</label>
                   <input
                     type="date"
                     value={assignmentForm.dueDate}
@@ -5263,7 +5318,7 @@ const renderMessagesTab = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Due Time</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Closing Time</label>
                   <input
                     type="time"
                     value={assignmentForm.dueTime}
@@ -5279,14 +5334,7 @@ const renderMessagesTab = () => {
                   type="button"
                   onClick={() => {
                     setShowAssignmentModal(false);
-                    setAssignmentForm({
-                      title: '',
-                      description: '',
-                      instructions: '',
-                      priority: 'normal',
-                      dueDate: '',
-                      dueTime: ''
-                    });
+                    setAssignmentForm(emptyAssignmentForm);
                     setSelectedClientForAssignment('');
                     setSelectedCaregiverForAssignment('');
                   }}
@@ -5321,15 +5369,7 @@ const renderMessagesTab = () => {
                 onClick={() => {
                   setShowEditAssignmentModal(false);
                   setSelectedAssignmentForEdit(null);
-                  setEditAssignmentForm({
-                    title: '',
-                    description: '',
-                    instructions: '',
-                    priority: 'normal',
-                    dueDate: '',
-                    dueTime: '',
-                    status: 'pending'
-                  });
+                  setEditAssignmentForm({ ...emptyAssignmentForm, status: 'pending' });
                 }}
                 className="p-2 rounded-full hover:bg-gray-100 transition"
               >
@@ -5398,6 +5438,32 @@ const renderMessagesTab = () => {
                 />
               </div>
 
+              {/* Resumption Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Resumption Date</label>
+                  <input
+                    type="date"
+                    value={editAssignmentForm.startDate}
+                    onChange={(event) =>
+                      setEditAssignmentForm((prev) => ({ ...prev, startDate: event.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Resumption Time</label>
+                  <input
+                    type="time"
+                    value={editAssignmentForm.startTime}
+                    onChange={(event) =>
+                      setEditAssignmentForm((prev) => ({ ...prev, startTime: event.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
@@ -5429,7 +5495,7 @@ const renderMessagesTab = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Due Date</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Closing Date</label>
                     <input
                       type="date"
                       value={editAssignmentForm.dueDate}
@@ -5440,7 +5506,7 @@ const renderMessagesTab = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Due Time</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Closing Time</label>
                     <input
                       type="time"
                       value={editAssignmentForm.dueTime}
@@ -5459,15 +5525,7 @@ const renderMessagesTab = () => {
                   onClick={() => {
                     setShowEditAssignmentModal(false);
                     setSelectedAssignmentForEdit(null);
-                    setEditAssignmentForm({
-                      title: '',
-                      description: '',
-                      instructions: '',
-                      priority: 'normal',
-                      dueDate: '',
-                      dueTime: '',
-                      status: 'pending'
-                    });
+                    setEditAssignmentForm({ ...emptyAssignmentForm, status: 'pending' });
                   }}
                   className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
                 >

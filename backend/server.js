@@ -17,7 +17,7 @@ const turnRoutes = require('./routes/turn');
 const emailRoutes = require('./routes/email');
 const uploadRoutes = require('./routes/uploadRoutes');
 const sseRoutes = require('./routes/sse');
-const agoraRoutes = require('./routes/agora');
+
 const notificationPrefRoutes = require('./routes/notificationPreferences');
 const pushRoutes = require('./routes/push');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -71,6 +71,10 @@ app.use(cors({
 
 // Cookie and body parsing middleware
 app.use(cookieParser());
+// Webhook signature verification needs the raw request body — mount a raw
+// parser for that path BEFORE express.json() consumes the stream, otherwise
+// HMAC is computed over a parsed object and every webhook fails.
+app.use('/api/webhooks', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -99,7 +103,7 @@ app.use('/api/turn-credentials', turnRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/events', sseRoutes);
-app.use('/api/agora', agoraRoutes);
+
 app.use('/api/notifications', notificationPrefRoutes);
 app.use('/api/push', pushRoutes);
 

@@ -32,6 +32,7 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
   const webrtcRef = useRef(null);
   const unsubRef = useRef(null);
   const timerRef = useRef(null);
+  const waitTimeoutRef = useRef(null);
   const offerSentRef = useRef(false);
   const remoteAttachedRef = useRef(false);
   const localVideoRef = useRef(null);
@@ -43,7 +44,11 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
   const cleanup = useCallback(() => {
     if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (waitTimeoutRef.current) { clearTimeout(waitTimeoutRef.current); waitTimeoutRef.current = null; }
     if (webrtcRef.current) {
+      // Signal 'end' so the peer isn't left hanging on teardown paths that
+      // skip hangUp (unmount, navigation, peer-end, init failure)
+      webrtcRef.current.sendEndBeacon();
       webrtcRef.current.endCall().catch(() => {});
       webrtcRef.current = null;
     }
@@ -64,6 +69,11 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
     let mounted = true;
     const svc = new WebRTCService();
     webrtcRef.current = svc;
+
+    // If the tab closes or reloads mid-call, still tell the peer we left
+    const onUnload = () => { webrtcRef.current?.sendEndBeacon(); };
+    window.addEventListener('pagehide', onUnload);
+    window.addEventListener('beforeunload', onUnload);
 
     const run = async () => {
       await svc.initialize();
@@ -112,6 +122,15 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
 
       setPhase('waiting');
 
+      // Bail out if the other party never joins — otherwise we'd wait forever
+      waitTimeoutRef.current = setTimeout(() => {
+        if (!remoteAttachedRef.current) {
+          toast.info(`${peerName} did not join the consultation`);
+          cleanup();
+          onEnd?.(0);
+        }
+      }, 120000);
+
       unsubRef.current = svc.listenForSignaling(channelName, async (msg) => {
         try {
           if (msg.type === 'presence') {
@@ -151,6 +170,8 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
 
     return () => {
       mounted = false;
+      window.removeEventListener('pagehide', onUnload);
+      window.removeEventListener('beforeunload', onUnload);
       cleanup();
     };
   }, [appointment.id]);

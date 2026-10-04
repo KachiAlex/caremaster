@@ -69,7 +69,9 @@ const MessagingInterface = () => {
       
       try {
         setLoading(true);
-        const userConversations = await getConversationsByUser(userProfile.id);
+        const userConversations = await getConversationsByUser(
+          [userProfile.id, userProfile.clientId, userProfile.uid].filter(Boolean)
+        );
         setConversations(userConversations);
         
         if (userConversations.length > 0 && !selectedConversation) {
@@ -92,7 +94,9 @@ const MessagingInterface = () => {
   useEffect(() => {
     if (!userProfile) return;
 
-    const unsubscribe = subscribeToUserConversations(userProfile.id, (updatedConversations) => {
+    const unsubscribe = subscribeToUserConversations(
+      [userProfile.id, userProfile.clientId, userProfile.uid].filter(Boolean),
+      (updatedConversations) => {
       setConversations(updatedConversations);
     });
 

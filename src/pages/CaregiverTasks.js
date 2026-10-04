@@ -437,12 +437,44 @@ const CaregiverTasks = () => {
 
                     {/* Task Details */}
                     <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
-                      {(task.dueDate || task.scheduledTime) && (
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          <span>Due: {new Date(task.dueDate || task.scheduledTime).toLocaleDateString()} {new Date(task.dueDate || task.scheduledTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                        </div>
-                      )}
+                      {(() => {
+                        // scheduledTime/startDate = resumption, endDate/dueDate(+dueTime) = closing.
+                        const start = task.scheduledTime || task.startDate;
+                        const endBase = task.endDate || task.dueDate;
+                        const end = (() => {
+                          if (!endBase) return null;
+                          if (task.dueTime && typeof endBase === 'string' && !/[T ]\d{2}:?\d{2}/.test(endBase)) {
+                            return `${endBase}T${task.dueTime}`;
+                          }
+                          return endBase;
+                        })();
+                        const startD = start ? new Date(start) : null;
+                        const endD = end ? new Date(end) : null;
+                        const valid = (d) => d && !isNaN(d.getTime());
+                        const fmt = (d) => `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                        if (!valid(startD) && !valid(endD)) return null;
+                        if (!valid(startD) || !valid(endD) || startD.getTime() === endD.getTime()) {
+                          const single = valid(endD) ? endD : startD;
+                          return (
+                            <div className="flex items-center">
+                              <Calendar className="h-4 w-4 mr-1" />
+                              <span>Due: {fmt(single)}</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <>
+                            <div className="flex items-center">
+                              <Calendar className="h-4 w-4 mr-1" />
+                              <span>Start: {fmt(startD)}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1" />
+                              <span>End: {fmt(endD)}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                         {task.status?.replace('-', ' ') || 'pending'}
                       </span>

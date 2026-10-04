@@ -20,6 +20,66 @@ const CAREGIVER_ROLES = ['caregiver', 'nurse'];
 const DOCTOR_ROLES = ['doctor'];
 const ADMIN_ROLES = ['admin', 'institution-admin', 'InstitutionAdmin'];
 const SUPER_ADMIN_ROLES = ['super-admin', 'superadmin'];
+// Institution staff who need tenant-scoped (not patient-scoped) reads
+const INSTITUTION_STAFF_ROLES = ['pharmacist', 'lab_technician'];
+
+// ─── Operational / tenant data tables ───
+// These hold institution business data, not patient records and have no
+// per-row owner column. Patients/caregivers/doctors must never blanket-read
+// or modify them; institution staff read them scoped to their tenant.
+const RESTRICTED_TABLES = [
+  'licenses',
+  'subscriptions',
+  'client_subscriptions',
+  'billing_settings',
+  'inventory',
+  'suppliers',
+  'purchase_orders',
+  'goods_received',
+  'stock_audit',
+  'analytics_events',
+  'wages',
+  'reports',
+  'campaigns',
+  'bills',
+];
+
+// Platform-owned tables. A row with no institution_id belongs to the
+// platform / super-admin — tenant admins and below must never modify it.
+const PLATFORM_MANAGED_TABLES = [
+  'users',
+  'institutions',
+  'licenses',
+  'subscriptions',
+  'client_subscriptions',
+  'billing_plans',
+  'billing_settings',
+];
+
+// Operational tables institution staff (pharmacy/lab) may modify within
+// their own tenant.
+const STAFF_WRITABLE_TABLES = [
+  'inventory',
+  'suppliers',
+  'purchase_orders',
+  'goods_received',
+  'stock_audit',
+  'prescriptions',
+  'diagnostics',
+];
+
+// Columns that can denote "this row belongs to a staff user" on tables
+// without a dedicated owner column.
+const STAFF_OWNERSHIP_COLUMNS = [
+  'caregiver_id', 'nurse_id', 'doctor_id', 'user_id',
+  'recorded_by', 'created_by', 'performed_by', 'assigned_by',
+];
+
+function isStaffOwnedRecord(record, userId) {
+  return STAFF_OWNERSHIP_COLUMNS.some(
+    (col) => record[col] && String(record[col]) === String(userId)
+  );
+}
 
 // ─── Tables that contain patient-specific health data ───
 // These tables have a patient_id (or client_id) column and must be scoped.
@@ -44,6 +104,7 @@ const PATIENT_DATA_TABLES = [
   'telemedicine_recordings',
   'adl_logs',
   'client_activities',
+  'referrals',
 ];
 
 // ─── Tables that only admins/super-admins should access via the generic data API ───
@@ -107,6 +168,7 @@ const OWNER_COLUMN = {
   // For caregiver/doctor tables, scope by their user id
   adl_logs: 'client_id',
   client_activities: 'patient_id',
+  referrals: 'patient_id',
   assignments: 'patient_id', // has both patient_id and caregiver_id
   care_tasks: 'patient_id', // has both patient_id and caregiver_id
   schedules: 'client_id', // has both client_id and caregiver_id
@@ -311,6 +373,22 @@ async function scopeQuery(query, user, tableName) {
     return query;
   }
 
+  // Operational/tenant tables: only tenant admins and institution staff may
+  // read them — never patients, caregivers, or doctors. License keys are
+  // admin-only even within a tenant.
+  if (RESTRICTED_TABLES.includes(tableName)) {
+    const isAdmin = ADMIN_ROLES.includes(userType);
+    const isStaff = INSTITUTION_STAFF_ROLES.includes(userType);
+    if (!isAdmin && !isStaff) {
+      query.whereRaw('1=0');
+      return query;
+    }
+    if (tableName === 'licenses' && !isAdmin) {
+      query.whereRaw('1=0');
+      return query;
+    }
+  }
+
   // Participant-scoped collaboration tables — membership decides visibility
   // for non-admins; institution scoping for admins (strict per tenant).
   if (PARTICIPANT_TABLES.includes(tableName)) {
@@ -329,7 +407,32 @@ async function scopeQuery(query, user, tableName) {
   if (ADMIN_ROLES.includes(userType)) {
     const hasInstitutionId = await tableHasColumn(tableName, 'institution_id');
     if (hasInstitutionId) {
-      query.where(`${tableName}.institution_id`, user.institution_id);
+      if (tableName === 'telemedicine_appointments') {
+        // Requests from standalone (unaffiliated) clients have no tenant —
+        // without this they are invisible to every admin and can never be
+        // scheduled.
+        query.where(function() {
+          this.where(`${tableName}.institution_id`, user.institution_id)
+            .orWhereNull(`${tableName}.institution_id`);
+        });
+      } else {
+        query.where(`${tableName}.institution_id`, user.institution_id);
+      }
+    }
+    return query;
+  }
+
+  // Institution staff (pharmacist, lab technician): institution-scoped
+  // reads on tenant tables, like admins. Tables without institution_id
+  // (e.g. the medications catalog) stay readable.
+  if (INSTITUTION_STAFF_ROLES.includes(userType)) {
+    const hasInstitutionId = await tableHasColumn(tableName, 'institution_id');
+    if (hasInstitutionId) {
+      if (user.institution_id) {
+        query.where(`${tableName}.institution_id`, user.institution_id);
+      } else {
+        query.whereRaw('1=0');
+      }
     }
     return query;
   }
@@ -535,10 +638,17 @@ async function canModifyRecord(user, tableName, record) {
 
   // Admin: check institution
   if (ADMIN_ROLES.includes(userType)) {
-    if (record.institution_id && record.institution_id === user.institution_id) return true;
-    // If no institution_id on the record, allow (some tables don't have it)
-    if (!record.institution_id) return true;
-    return false;
+    // Institution records are addressed by their own id
+    if (tableName === 'institutions') {
+      return String(record.id) === String(user.institution_id);
+    }
+    if (record.institution_id) {
+      return String(record.institution_id) === String(user.institution_id);
+    }
+    // No institution_id: rows on platform-managed tables (users, licenses,
+    // subscriptions…) belong to the platform/super-admin — deny. Tables
+    // without a tenant column (notifications, schedules…) stay allowed.
+    return !PLATFORM_MANAGED_TABLES.includes(tableName);
   }
 
   // users table: any authenticated user can access their own record.
@@ -593,10 +703,12 @@ async function canModifyRecord(user, tableName, record) {
   // Patient: check ownership
   if (PATIENT_ROLES.includes(userType)) {
     const ownerCol = OWNER_COLUMN[tableName];
-    if (!ownerCol) return true; // Non-patient table, allow
+    // No owner column → not a patient-owned table — deny rather than allow
+    // blanket modification of operational/platform data.
+    if (!ownerCol) return false;
     if (ownerCol === 'id') return record.id === user.id;
     const recordOwnerId = record[ownerCol];
-    if (tableName === 'telemedicine_appointments' && ownerCol === 'client_id') {
+    if ((tableName === 'telemedicine_appointments' || tableName === 'telemedicine_calls') && ownerCol === 'client_id') {
       const identityIds = await getUserIdentityIds(user.id);
       return identityIds.includes(String(recordOwnerId));
     }
@@ -628,7 +740,13 @@ async function canModifyRecord(user, tableName, record) {
     if (ownerCol === 'caregiver_id' || ownerCol === 'user_id') {
       return record[ownerCol] === user.id;
     }
-    return true; // Non-patient table
+    // Tables without a mapped owner column: allow only when the record is
+    // tagged with the caregiver's own id, and never on restricted/platform
+    // tables.
+    if (RESTRICTED_TABLES.includes(tableName) || PLATFORM_MANAGED_TABLES.includes(tableName)) {
+      return false;
+    }
+    return isStaffOwnedRecord(record, user.id);
   }
 
   // Doctor: check patient relationship
@@ -654,7 +772,104 @@ async function canModifyRecord(user, tableName, record) {
     if (ownerCol === 'doctor_id' || ownerCol === 'user_id') {
       return record[ownerCol] === user.id;
     }
-    return true;
+    if (RESTRICTED_TABLES.includes(tableName) || PLATFORM_MANAGED_TABLES.includes(tableName)) {
+      return false;
+    }
+    return isStaffOwnedRecord(record, user.id);
+  }
+
+  // Institution staff (pharmacist, lab technician): may modify pharmacy-ops
+  // tables within their tenant; elsewhere only rows they own.
+  if (INSTITUTION_STAFF_ROLES.includes(userType)) {
+    if (STAFF_WRITABLE_TABLES.includes(tableName)) {
+      return !!record.institution_id &&
+        String(record.institution_id) === String(user.institution_id);
+    }
+    if (RESTRICTED_TABLES.includes(tableName) || PLATFORM_MANAGED_TABLES.includes(tableName)) {
+      return false;
+    }
+    return isStaffOwnedRecord(record, user.id);
+  }
+
+  return false;
+}
+
+/**
+ * Creation policy for the generic data API (POST + bulk insert).
+ * Row-ownership forcing for patients happens in the route — this gates
+ * which roles may create rows in each table at all.
+ *
+ * Returns { allowed: boolean, reason?: string }
+ */
+function canCreateRecord(user, tableName) {
+  const userType = user.user_type;
+  if (SUPER_ADMIN_ROLES.includes(userType)) return { allowed: true };
+
+  // User rows are created by admins (or via dedicated /api/auth endpoints)
+  if (tableName === 'users') {
+    return ADMIN_ROLES.includes(userType)
+      ? { allowed: true }
+      : { allowed: false, reason: 'Admin access required to create user records' };
+  }
+
+  // Platform-level catalog/billing rows are super-admin only
+  if (['institutions', 'licenses', 'billing_plans'].includes(tableName)) {
+    return { allowed: false, reason: 'Super-admin access required for this table' };
+  }
+
+  // Tenant billing objects require an admin
+  if (['subscriptions', 'client_subscriptions', 'billing_settings'].includes(tableName)) {
+    return ADMIN_ROLES.includes(userType)
+      ? { allowed: true }
+      : { allowed: false, reason: 'Admin access required for this table' };
+  }
+
+  // Operational tables require a staff role (not patients)
+  const STAFF_CREATE_TABLES = [
+    'inventory', 'suppliers', 'purchase_orders', 'goods_received',
+    'stock_audit', 'referrals', 'medications',
+  ];
+  if (STAFF_CREATE_TABLES.includes(tableName)) {
+    const staff = [...ADMIN_ROLES, ...INSTITUTION_STAFF_ROLES, ...CAREGIVER_ROLES, ...DOCTOR_ROLES];
+    return staff.includes(userType)
+      ? { allowed: true }
+      : { allowed: false, reason: 'Staff access required for this table' };
+  }
+
+  return { allowed: true };
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * May this user write signaling/RTC messages on the given channel?
+ * Channels: consult_<appointmentId> (telemedicine), call_<callId> (chat calls).
+ * Mirrors the participation rules used for Agora token issuance.
+ */
+async function canSignalChannel(user, channelName) {
+  if (!channelName || typeof channelName !== 'string') return false;
+  if (SUPER_ADMIN_ROLES.includes(user.user_type)) return true;
+
+  const identityIds = (await getUserIdentityIds(user.id)).map(String);
+  const isAdmin = ADMIN_ROLES.includes(user.user_type);
+
+  if (channelName.startsWith('consult_')) {
+    const apptId = channelName.slice('consult_'.length);
+    if (!UUID_RE.test(apptId)) return false;
+    const appt = await db('telemedicine_appointments').where({ id: apptId }).first();
+    if (!appt) return false;
+    if (isAdmin) return appt.institution_id === user.institution_id;
+    return identityIds.includes(String(appt.client_id)) ||
+      identityIds.includes(String(appt.doctor_id));
+  }
+
+  if (channelName.startsWith('call_')) {
+    // calls.call_id already includes the call_ prefix
+    const call = await db('calls').where({ call_id: channelName }).first();
+    if (!call) return false;
+    if (isAdmin) return call.institution_id === user.institution_id;
+    return [call.caller_id, call.recipient_id, call.receiver_id]
+      .map(String).some(id => identityIds.includes(id));
   }
 
   return false;
@@ -684,6 +899,9 @@ module.exports = {
   scopeQuery,
   canAccessTable,
   canModifyRecord,
+  canCreateRecord,
+  canSignalChannel,
+  isStaffOwnedRecord,
   getAssignedPatientIds,
   getDoctorPatientIds,
   getUserIdentityIds,
@@ -697,5 +915,9 @@ module.exports = {
   DOCTOR_ROLES,
   ADMIN_ROLES,
   SUPER_ADMIN_ROLES,
+  INSTITUTION_STAFF_ROLES,
+  RESTRICTED_TABLES,
+  PLATFORM_MANAGED_TABLES,
+  STAFF_WRITABLE_TABLES,
   OWNER_COLUMN,
 };

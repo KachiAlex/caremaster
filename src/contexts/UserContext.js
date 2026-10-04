@@ -74,6 +74,13 @@ export const UserProvider = ({ children }) => {
             if (userDoc.exists()) {
               const dbProfile = userDoc.data();
               const mergedProfile = { ...userData, ...dbProfile, ...(clientData || {}) };
+              // Never let the merged client row overwrite the ACCOUNT identity:
+              // userProfile.id must stay the users.id that conversations,
+              // notifications, calls and scoping key on. The client record id
+              // is exposed separately as clientId.
+              mergedProfile.id = userData.id || dbProfile.id;
+              mergedProfile.uid = userData.uid || mergedProfile.id;
+              if (clientData?.id) mergedProfile.clientId = clientData.id;
               setUserProfile(mergedProfile);
               setUser(mergedProfile);
               localStorage.setItem('user', JSON.stringify(mergedProfile));

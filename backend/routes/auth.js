@@ -1037,7 +1037,8 @@ router.get('/license-status/:institutionId', async (req, res) => {
       license: {
         id: license.id,
         institutionId: license.institution_id,
-        licenseKey: license.license_key,
+        // licenseKey intentionally omitted — this is a public endpoint and
+        // the key must not be exposed.
         plan: license.plan,
         seats: license.seats,
         startsAt: license.starts_at,

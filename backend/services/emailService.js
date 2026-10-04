@@ -144,11 +144,42 @@ async function sendGenericEmail({ to, subject, html, text }) {
   return sendEmail({ to, subject, html, text });
 }
 
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Send an in-app notification as an email.
+ * Used by notificationDispatcher so important events also reach users
+ * who aren't currently logged in.
+ */
+async function sendNotificationEmail({ to, userName, title, message, actionUrl }) {
+  const frontendUrl = (process.env.FRONTEND_URL || 'https://getcaremaster.com').replace(/\/$/, '');
+  const fullActionUrl = actionUrl ? `${frontendUrl}${actionUrl.startsWith('/') ? '' : '/'}${actionUrl}` : null;
+  const body = `
+    <p style="font-size: 16px; margin-bottom: 20px;">Hello ${escapeHtml(userName) || 'there'},</p>
+    <p style="font-size: 16px; margin-bottom: 20px;">${escapeHtml(message)}</p>
+    ${fullActionUrl ? `
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${escapeHtml(fullActionUrl)}" style="display: inline-block; background: ${BRAND_COLOR_DARK}; color: ${BRAND_COLOR_GOLD}; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">View in Care Master</a>
+    </div>` : ''}
+    <p style="font-size: 14px; color: #666; margin-top: 30px;">Best regards,<br>Care Master Team</p>`;
+
+  const html = emailWrapper(escapeHtml(title) || 'Notification', body);
+  return sendEmail({ to, subject: `Care Master: ${title || 'New notification'}`, html });
+}
+
 module.exports = {
   sendEmail,
   sendPasswordResetEmail,
   sendWelcomeEmail,
   send2FACodeEmail,
   sendTaskAssignmentEmail,
-  sendGenericEmail
+  sendGenericEmail,
+  sendNotificationEmail
 };

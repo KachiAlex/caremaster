@@ -39,6 +39,8 @@ function snakeToCamel(obj) {
   return result;
 }
 
+const DEFAULT_FETCH_TIMEOUT = 20000;
+
 async function apiFetch(path, options = {}) {
   const url = `${API_BASE()}${path}`;
   const headers = {
@@ -48,15 +50,36 @@ async function apiFetch(path, options = {}) {
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
+  // Bound every request — a stalled fetch must not hang page load or poll
+  // loops forever. Callers can override via options.timeout (ms) or pass
+  // options.signal to layer their own cancellation.
+  const { timeout = DEFAULT_FETCH_TIMEOUT, signal: callerSignal, ...fetchOptions } = options;
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeout);
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+
   let res;
   try {
-    res = await fetch(url, { ...options, headers, credentials: 'include' });
+    res = await fetch(url, { ...fetchOptions, headers, credentials: 'include', signal: controller.signal });
   } catch (networkError) {
+    clearTimeout(timer);
     // Network failures (offline, timeout, etc.) should not clear auth state.
-    const err = new Error('Network unavailable. Please check your connection and try again.');
-    err.code = 'network-error';
+    const err = new Error(
+      timedOut
+        ? 'Request timed out. The server is taking too long to respond — please try again.'
+        : 'Network unavailable. Please check your connection and try again.'
+    );
+    err.code = timedOut ? 'timeout' : 'network-error';
     throw err;
   }
+  clearTimeout(timer);
 
   // Only 401 means the session is unauthenticated. 403 is an authorization
   // denial for a specific record/action — it must not tear down the session
@@ -234,7 +257,7 @@ export async function getDocs(queryRef) {
     offlineCache.set(cacheKey, records);
     return makeQuerySnapshot(filtered, collectionName);
   } catch (error) {
-    if ((error.code === 'network-error' || !offlineCache.isOnline())) {
+    if ((error.code === 'network-error' || error.code === 'timeout' || !offlineCache.isOnline())) {
       const cached = offlineCache.get(cacheKey);
       if (cached) {
         const filtered = applyClientFilter(cached, filters);
@@ -263,7 +286,7 @@ export async function getDoc(docRef) {
       offlineCache.remove(cacheKey);
       return { id: docRef.id, exists: () => false, data: () => null, ref: docRef };
     }
-    if ((err.code === 'network-error' || !offlineCache.isOnline())) {
+    if ((err.code === 'network-error' || err.code === 'timeout' || !offlineCache.isOnline())) {
       const cached = offlineCache.get(cacheKey);
       if (cached) {
         return {
@@ -324,10 +347,23 @@ export function onSnapshot(queryRef, callback, errorCallback) {
   const isFastCollection = collectionName === 'signaling' || collectionName === 'callNotifications';
   const interval = isFastCollection ? FAST_POLL_INTERVAL : POLL_INTERVAL;
 
-  // Track which doc IDs we've already emitted so docChanges only reports
-  // genuinely new documents (matching Firebase onSnapshot semantics).
-  const seenIds = new Set();
+  // Track a content fingerprint per doc so docChanges reports genuinely new
+  // ('added'), updated ('modified'), and removed ('removed') documents —
+  // matching Firebase onSnapshot semantics. Fingerprinting matters because
+  // updates like a conversation's lastMessageTime bump or a notification's
+  // read flip change no doc ids, and would otherwise never reach subscribers.
+  const seenDocs = new Map();
   let isFirstPoll = true;
+  let pollInFlight = false;
+  let pollQueued = false;
+
+  const fingerprint = (d) => {
+    const data = d.data();
+    // Prefer a server-stamped modification field; fall back to full-content
+    // comparison for tables that don't carry one.
+    const stamp = data.updatedAt || data.updated_at || data.lastMessageTime;
+    return stamp ? String(stamp) : JSON.stringify(data);
+  };
 
   const poll = () => {
     // Skip polling while logged out — subscriptions would otherwise fire
@@ -336,19 +372,36 @@ export function onSnapshot(queryRef, callback, errorCallback) {
     // On web the JWT lives in an httpOnly cookie (never localStorage), so the
     // logged-in signal is the cached 'user' blob, which is cleared on logout.
     if (!localStorage.getItem('user')) return;
+    if (pollInFlight) {
+      // An SSE-triggered poll while one is in flight would be skipped —
+      // queue one follow-up so the event isn't lost.
+      pollQueued = true;
+      return;
+    }
+    pollInFlight = true;
     getDocs(queryRef)
       .then((snap) => {
-        // Build a filtered snapshot that only includes new docs in docChanges
-        const newDocs = snap.docs.filter((d) => {
-          const isNew = !seenIds.has(d.id);
-          if (isNew) seenIds.add(d.id);
-          return isNew;
-        });
+        const changes = [];
+        const currentIds = new Set();
 
-        // On first poll, all docs are "added". On subsequent polls, only
-        // genuinely new docs are "added". Return the full docs list but
-        // with docChanges reflecting only new additions.
-        const changes = newDocs.map((d) => ({ type: 'added', doc: d }));
+        for (const d of snap.docs) {
+          currentIds.add(d.id);
+          const fp = fingerprint(d);
+          if (!seenDocs.has(d.id)) {
+            changes.push({ type: 'added', doc: d });
+          } else if (seenDocs.get(d.id) !== fp) {
+            changes.push({ type: 'modified', doc: d });
+          }
+          seenDocs.set(d.id, fp);
+        }
+
+        // Docs that dropped out of the query (deleted, or no longer matching)
+        for (const id of Array.from(seenDocs.keys())) {
+          if (!currentIds.has(id)) {
+            seenDocs.delete(id);
+            changes.push({ type: 'removed', doc: { id, data: () => null } });
+          }
+        }
 
         const enrichedSnap = {
           ...snap,
@@ -364,7 +417,14 @@ export function onSnapshot(queryRef, callback, errorCallback) {
           isFirstPoll = false;
         }
       })
-      .catch((err) => errorCallback && errorCallback(err));
+      .catch((err) => errorCallback && errorCallback(err))
+      .finally(() => {
+        pollInFlight = false;
+        if (pollQueued) {
+          pollQueued = false;
+          poll();
+        }
+      });
   };
 
   poll();

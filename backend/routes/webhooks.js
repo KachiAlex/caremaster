@@ -5,20 +5,29 @@ const { logger } = require('../utils/logger');
 
 const router = express.Router();
 
-// Paystack webhook handler
-router.post('/paystack', express.raw({ type: 'application/json' }), async (req, res) => {
+// Paystack webhook handler — req.body arrives as a raw Buffer (the raw
+// parser for this path is mounted in server.js before express.json so the
+// HMAC is computed over the exact bytes Paystack signed).
+router.post('/paystack', async (req, res) => {
   try {
+    const rawBody = Buffer.isBuffer(req.body)
+      ? req.body
+      : Buffer.from(JSON.stringify(req.body || {}), 'utf8');
+
     const hash = crypto
       .createHmac('sha512', process.env.PAYSTACK_WEBHOOK_SECRET)
-      .update(req.body, 'utf8')
+      .update(rawBody)
       .digest('hex');
 
-    if (hash !== req.headers['x-paystack-signature']) {
+    const signature = String(req.headers['x-paystack-signature'] || '');
+    const expected = Buffer.from(hash, 'utf8');
+    const actual = Buffer.from(signature, 'utf8');
+    if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
       logger.warn('Invalid Paystack webhook signature');
       return res.status(400).send('Invalid signature');
     }
 
-    const event = JSON.parse(req.body);
+    const event = JSON.parse(rawBody.toString('utf8'));
     logger.info(`Paystack webhook received: ${event.event}`);
 
     switch (event.event) {

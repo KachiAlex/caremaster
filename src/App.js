@@ -35,6 +35,7 @@ import InstitutionLanding from './pages/InstitutionLanding';
 const SecuritySettings = lazy(() => import('./components/SecuritySettings'));
 const SecurityDashboard = lazy(() => import('./components/SecurityDashboard'));
 const ChooseInstitution = lazy(() => import('./pages/ChooseInstitution'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const TenantPartners = lazy(() => import('./pages/TenantPartners'));
 // Admin routes deprecated
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -423,6 +424,12 @@ function AppContent({
         path="/signup" 
         element={<Navigate to="/login" replace />} 
       />
+
+      {/* Password reset — public; reached via the emailed reset link */}
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
+      />
       
       {/* Super Admin Routes - Must be before other protected routes */}
       <Route
@@ -643,7 +650,7 @@ function AppContent({
         path="/subscription"
         element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />}
       >
-        <Route index element={<ClientPortalHelp />} />
+        <Route index element={<Subscription />} />
       </Route>
       <Route 
         path="/client-caregivers" 

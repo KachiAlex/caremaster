@@ -9,6 +9,14 @@ const {
   sendGenericEmail
 } = require('../services/emailService');
 const { logger } = require('../utils/logger');
+const { authenticateToken, requireRole } = require('../middleware/auth');
+
+// All email endpoints require an authenticated caller — these routes send
+// real mail through the platform SMTP account, so an open endpoint would
+// be an unauthenticated relay for spam/phishing. The pre-auth flows
+// (forgot-password, 2FA codes) send mail server-side from /api/auth and do
+// not go through this router.
+router.use(authenticateToken);
 
 /**
  * POST /api/email/password-reset
@@ -117,9 +125,9 @@ router.post('/task-assignment', [
 
 /**
  * POST /api/email/generic
- * Send generic email
+ * Send generic email (arbitrary subject + body — admin roles only)
  */
-router.post('/generic', [
+router.post('/generic', requireRole(['admin', 'institution-admin', 'InstitutionAdmin', 'super-admin', 'superadmin']), [
   body('to').isEmail().withMessage('Valid email is required'),
   body('subject').trim().notEmpty().withMessage('Subject is required'),
   body('html').optional().trim(),

@@ -2,38 +2,70 @@ const db = require('../utils/database');
 const { logger } = require('../utils/logger');
 
 /**
- * Cleanup old signaling and call notification records.
+ * Cleanup old signaling/call notification records and reconcile stale calls.
  *
- * These tables grow very quickly during calling and can bloat the database if
- * old messages are not removed. Completed/missed/rejected calls older than the
- * retention window are cleaned up, while 'calling' records are left alone.
+ * - `signaling` rows are pure WebRTC transport garbage — safe to delete.
+ * - `calls` rows are the user's call HISTORY — never deleted. Rows stuck in
+ *   transient states (crashed/abandoned tabs) are marked missed/ended.
+ * - `call_notifications`: pending ones past the ring window become 'missed';
+ *   resolved ones are pruned after NOTIFICATION_RETENTION_DAYS.
  */
+const NOTIFICATION_RETENTION_DAYS = 30;
+const STALE_RING_HOURS = 2;    // nobody rings for 2h — the caller is gone
+const STALE_ACTIVE_HOURS = 6;  // no real call stays 'answered' for 6h without updates
+
 async function cleanupCallSignaling(retentionHours = 24) {
   try {
-    const cutoff = new Date(Date.now() - retentionHours * 60 * 60 * 1000);
+    const now = Date.now();
+    const signalingCutoff = new Date(now - retentionHours * 60 * 60 * 1000);
+    const staleRing = new Date(now - STALE_RING_HOURS * 60 * 60 * 1000);
+    const staleActive = new Date(now - STALE_ACTIVE_HOURS * 60 * 60 * 1000);
+    const notificationCutoff = new Date(now - NOTIFICATION_RETENTION_DAYS * 24 * 60 * 60 * 1000);
 
-    const deletedCalls = await db('calls')
-      .whereNot('status', 'calling')
-      .where('updated_at', '<', cutoff)
-      .orWhere(function() {
-        this.whereNot('status', 'calling').whereNull('updated_at').where('created_at', '<', cutoff);
-      })
-      .delete();
+    const lastTouchedBefore = (qb, cutoff) =>
+      qb.where(function() {
+        this.where('updated_at', '<', cutoff)
+          .orWhere(function() {
+            this.whereNull('updated_at').where('created_at', '<', cutoff);
+          });
+      });
 
+    // Expire calls stuck mid-ring or mid-call (browser crash, dropped network)
+    const missedCalls = await lastTouchedBefore(
+      db('calls').whereIn('status', ['initiating', 'calling', 'ringing']),
+      staleRing
+    ).update({ status: 'missed', updated_at: new Date() });
+
+    const hungUpCalls = await lastTouchedBefore(
+      db('calls').whereIn('status', ['answered', 'active', 'in-progress', 'connected']),
+      staleActive
+    ).update({ status: 'ended', updated_at: new Date() });
+
+    // Pending notifications older than the ring window are stale too
+    const staleNotifications = await lastTouchedBefore(
+      db('call_notifications').whereIn('status', ['incoming', 'calling', 'ringing', 'pending']),
+      staleRing
+    ).update({ status: 'missed', updated_at: new Date() });
+
+    // Resolved notifications are pruned after the retention window
     const deletedNotifications = await db('call_notifications')
-      .whereNot('status', 'calling')
-      .where('updated_at', '<', cutoff)
-      .orWhere(function() {
-        this.whereNot('status', 'calling').whereNull('updated_at').where('created_at', '<', cutoff);
+      .whereNotIn('status', ['incoming', 'calling', 'ringing', 'pending'])
+      .where(function() {
+        this.where('updated_at', '<', notificationCutoff)
+          .orWhere(function() {
+            this.whereNull('updated_at').where('created_at', '<', notificationCutoff);
+          });
       })
       .delete();
 
     const deletedSignaling = await db('signaling')
-      .where('created_at', '<', cutoff)
+      .where('created_at', '<', signalingCutoff)
       .delete();
 
     logger.info(
-      `Call retention cleanup complete: calls=${deletedCalls}, notifications=${deletedNotifications}, signaling=${deletedSignaling}`
+      `Call cleanup: missedCalls=${missedCalls}, hungUpCalls=${hungUpCalls}, ` +
+      `staleNotifications=${staleNotifications}, deletedNotifications=${deletedNotifications}, ` +
+      `deletedSignaling=${deletedSignaling}`
     );
   } catch (error) {
     logger.error('Call retention cleanup failed:', error);

@@ -9,6 +9,7 @@ import {
   MoreVertical,
   Check,
   CheckCheck,
+  Clock,
   Paperclip,
   Smile,
   User,
@@ -62,7 +63,16 @@ const Messages = () => {
   const messagesEndRef = useRef(null);
 
   // Canonical account id — conversations.participants stores users.id
-  const myId = userProfile?.id || user?.uid;
+  const myId = userProfile?.id || user?.uid || user?.id;
+  // A user can appear in participants under several ids (users.id, clients
+  // row id, legacy firebase uid). Match all of them so conversations don't
+  // vanish when the profile merges in a client record.
+  const myIds = [...new Set(
+    [myId, userProfile?.clientId, userProfile?.uid, user?.uid, user?.id, userProfile?.userId]
+      .filter(Boolean)
+      .map(String)
+  )];
+  const isMe = (id) => id != null && myIds.includes(String(id));
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -75,7 +85,7 @@ const Messages = () => {
       return;
     }
     setLoading(true);
-    const unsubscribe = subscribeToUserConversations(myId, (data) => {
+    const unsubscribe = subscribeToUserConversations(myIds, (data) => {
       setConversations(data || []);
       setFilteredConversations(data || []);
       setLoading(false);
@@ -91,7 +101,7 @@ const Messages = () => {
       }
     });
     return () => { if (unsubscribe) unsubscribe(); };
-  }, [myId]);
+  }, [myIds.join(',')]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -137,9 +147,9 @@ const Messages = () => {
   const getOtherParticipant = (conv = selectedChat) => {
     if (!conv || !myId) return null;
     const details = Array.isArray(conv.participantDetails) ? conv.participantDetails : [];
-    const other = details.find(p => String(p.id) !== String(myId));
+    const other = details.find(p => !isMe(p.id));
     if (other) return other;
-    const rawId = (conv.participants || []).find(p => String(p) !== String(myId));
+    const rawId = (conv.participants || []).find(p => !isMe(p));
     return rawId ? { id: rawId, name: conv.title || 'Participant', role: '' } : null;
   };
 
@@ -175,6 +185,18 @@ const Messages = () => {
 
     return () => { if (unsubscribe) unsubscribe(); };
   }, [userProfile, user, callService, activeCall]);
+
+  // If the tab closes or reloads mid-call, still tell the peer we left
+  useEffect(() => {
+    if (!webrtc) return;
+    const onUnload = () => webrtc.sendEndBeacon();
+    window.addEventListener('pagehide', onUnload);
+    window.addEventListener('beforeunload', onUnload);
+    return () => {
+      window.removeEventListener('pagehide', onUnload);
+      window.removeEventListener('beforeunload', onUnload);
+    };
+  }, [webrtc]);
 
   // Shared WebRTC callback wiring for both call directions
   const setupWebrtcCallbacks = (svc) => {
@@ -248,6 +270,7 @@ const Messages = () => {
           }
           else if (msg.type === 'ice-candidate') await svc.handleIceCandidate(msg.data.candidate);
           else if (msg.type === 'reject') { toast.info(`${recipientName} rejected the call`); cleanupCall(); setActiveCall(null); }
+          else if (msg.type === 'end') { toast.info(`${recipientName} ended the call`); cleanupCall(); setActiveCall(null); }
         } catch (e) { console.error('Signaling handler error:', e); }
       });
 
@@ -292,6 +315,7 @@ const Messages = () => {
         try {
           if (msg.type === 'offer') await svc.handleOffer(msg.data.offer, incomingCall.callType);
           else if (msg.type === 'ice-candidate') await svc.handleIceCandidate(msg.data.candidate);
+          else if (msg.type === 'end') { toast.info('Call ended'); cleanupCall(); setActiveCall(null); }
         } catch (e) { console.error('Signaling handler error:', e); }
       });
 
@@ -327,6 +351,9 @@ const Messages = () => {
   // End the active call
   const handleEndCall = async () => {
     if (!activeCall) return;
+    // Tell the peer we're hanging up — otherwise they only find out via the
+    // ICE disconnect timeout
+    try { await webrtc?.sendSignalingMessage('end', {}); } catch { /* best effort */ }
     try {
       await callService.endCall(activeCall.callId, 0);
     } catch (error) {
@@ -436,10 +463,16 @@ const Messages = () => {
   };
 
   const getReadStatus = (message) => {
-    if (message.senderId === myId) {
-      return message.read ? <CheckCheck className="h-4 w-4 text-blue-500" /> : <Check className="h-4 w-4 text-gray-400" />;
+    if (!isMe(message.senderId)) return null;
+    // Optimistic local echo (not yet confirmed by the server)
+    if (String(message.id || '').startsWith('local-')) {
+      return <Clock className="h-3.5 w-3.5 text-blue-200" aria-label="Sending" />;
     }
-    return null;
+    // read=true → double blue check; persisted but unread → double grey check
+    // (delivered to the recipient's inbox). read undefined/false → delivered.
+    return message.read
+      ? <CheckCheck className="h-4 w-4 text-blue-300" aria-label="Read" />
+      : <CheckCheck className="h-4 w-4 text-blue-200 opacity-60" aria-label="Delivered" />;
   };
 
   return (
@@ -567,19 +600,19 @@ const Messages = () => {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.senderId === myId ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${isMe(message.senderId) ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    message.senderId === myId
+                    isMe(message.senderId)
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-900'
                   }`}>
-                    {message.senderId !== myId && (
+                    {!isMe(message.senderId) && (
                       <p className="text-xs font-medium text-gray-500 mb-0.5">{getOtherParticipantName()}</p>
                     )}
                     <p className="text-sm">{message.text || message.content}</p>
                     <div className={`flex items-center justify-between mt-1 ${
-                      message.senderId === myId ? 'text-blue-100' : 'text-gray-500'
+                      isMe(message.senderId) ? 'text-blue-100' : 'text-gray-500'
                     }`}>
                       <span className="text-xs">{(() => {
                         const ts = message.createdAt || message.timestamp;

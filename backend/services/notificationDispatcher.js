@@ -12,8 +12,9 @@
 
 const db = require('../utils/database');
 const { logger } = require('../utils/logger');
-const { shouldNotify } = require('../routes/notificationPreferences');
+const { shouldNotify, getEmailRecipient } = require('../routes/notificationPreferences');
 const webPush = require('./webPush');
+const emailService = require('./emailService');
 
 // Notification type constants (mirror the frontend)
 const TYPE = {
@@ -62,6 +63,42 @@ function resolveMessageNavigateTo(user, metadata) {
       : '/admin';
   }
   return `/messages${convId ? `?conversation=${convId}` : ''}`;
+}
+
+// Throttle chat emails — a busy conversation shouldn't spam the recipient's
+// inbox. Other notification types are low-frequency enough to send each time.
+const MESSAGE_EMAIL_THROTTLE_MS = 5 * 60 * 1000;
+const lastMessageEmailAt = new Map(); // `${userId}:${conversationId}` -> timestamp
+
+/**
+ * Email a copy of an in-app notification to the recipient, honouring their
+ * notification preferences. Best-effort: never throws, never blocks the
+ * notification insert.
+ */
+async function sendNotificationEmailCopy(userId, data, metadata) {
+  try {
+    if (data.type === TYPE.MESSAGE) {
+      const key = `${userId}:${metadata?.conversationId || 'messages'}`;
+      const last = lastMessageEmailAt.get(key) || 0;
+      if (Date.now() - last < MESSAGE_EMAIL_THROTTLE_MS) return;
+      lastMessageEmailAt.set(key, Date.now());
+      // Bound the map so it can't grow forever on a long-running server
+      if (lastMessageEmailAt.size > 5000) lastMessageEmailAt.clear();
+    }
+
+    const recipient = await getEmailRecipient(userId, data.type);
+    if (!recipient) return;
+
+    await emailService.sendNotificationEmail({
+      to: recipient.email,
+      userName: recipient.name,
+      title: data.title,
+      message: data.message,
+      actionUrl: metadata?.navigateTo,
+    });
+  } catch (err) {
+    logger.error(`notificationDispatcher email for user ${userId} failed:`, err);
+  }
 }
 
 /**
@@ -113,6 +150,10 @@ async function createNotification(userId, data) {
         },
       }).catch(() => {}); // Non-blocking — don't fail the request if push fails
     }
+
+    // Email a copy of the notification — fire-and-forget so SMTP latency or
+    // failures never slow down or break the write path.
+    sendNotificationEmailCopy(userId, data, metadata).catch(() => {});
 
     return row;
   } catch (err) {

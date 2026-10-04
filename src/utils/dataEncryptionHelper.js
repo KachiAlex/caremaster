@@ -16,12 +16,10 @@ const SENSITIVE_PATIENT_FIELDS = [
   'passportNumber',
   'driversLicense',
   
-  // Contact Information (can be sensitive)
-  'email',
-  'phone',
-  'phoneNumber',
-  'emergencyContactPhone',
-  'emergencyContactEmail',
+  // NOTE: contact fields (email, phone, emergencyContact*) are deliberately
+  // NOT encrypted — the backend needs them in plaintext for account creation,
+  // notifications, and deduplication. Encrypting them produced ciphertext
+  // login accounts and unreachable notification recipients.
   
   // Medical Information
   'allergies',

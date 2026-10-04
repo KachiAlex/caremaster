@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { authenticateToken } = require('../middleware/auth');
-const { scopeQuery, canAccessTable, canModifyRecord, getUserIdentityIds, isConversationParticipant, ADMIN_ONLY_TABLES, PATIENT_ROLES, SUPER_ADMIN_ROLES, OWNER_COLUMN, PARTICIPANT_TABLES } = require('../middleware/authorization');
+const { scopeQuery, canAccessTable, canModifyRecord, canCreateRecord, canSignalChannel, getUserIdentityIds, isConversationParticipant, ADMIN_ONLY_TABLES, PATIENT_ROLES, SUPER_ADMIN_ROLES, ADMIN_ROLES, OWNER_COLUMN, PARTICIPANT_TABLES } = require('../middleware/authorization');
 const { logger } = require('../utils/logger');
 const db = require('../utils/database');
 const sseManager = require('../sse');
@@ -200,6 +200,43 @@ function emitDataEvent(req, tableName, record) {
   const institutionId = req.user?.institution_id || req.user?.institutionId;
   const userIds = getEventUserIds(tableName, record);
   sseManager.emitTableEvent(tableName, record, { userIds, institutionId });
+}
+
+// Fields on the users table that change privileges or account security.
+// Non-admin users may never write these, even on their own record — role,
+// tenant and 2FA/biometric state change only via /api/auth/* endpoints or
+// an admin action.
+const USER_PRIVILEGED_FIELDS = [
+  'user_type', 'roles', 'is_active', 'is_verified', 'status', 'account_type',
+  'institution_id', 'organization_id', 'firebase_uid',
+  'two_factor_enabled', 'two_factor_secret', 'two_factor_phone',
+  'two_factor_email', 'two_factor_backup_codes',
+  'biometric_enabled', 'biometric_credential_id',
+  'password_hash', 'password_reset_token', 'password_reset_expires',
+];
+
+const ELEVATED_ROLES = ['super-admin', 'superadmin', 'super_admin'];
+
+/**
+ * Strip privileged account fields from a users-table write. Applies to
+ * every non-admin caller; admins keep full field access within their
+ * tenant but still cannot grant super-admin roles.
+ */
+function sanitizeUserWrite(tableName, data, user) {
+  if (tableName !== 'users') return data;
+  if (!ADMIN_ROLES.includes(user.user_type) && !SUPER_ADMIN_ROLES.includes(user.user_type)) {
+    for (const f of USER_PRIVILEGED_FIELDS) delete data[f];
+    return data;
+  }
+  if (!SUPER_ADMIN_ROLES.includes(user.user_type)) {
+    const requested = [data.user_type, ...(Array.isArray(data.roles) ? data.roles : [])]
+      .filter(Boolean).map(v => String(v).toLowerCase());
+    if (requested.some(r => ELEVATED_ROLES.includes(r))) {
+      delete data.user_type;
+      delete data.roles;
+    }
+  }
+  return data;
 }
 
 // Whitelisted fields per table for create/update operations
@@ -1056,7 +1093,17 @@ router.post('/:table', async (req, res) => {
       return res.status(403).json({ success: false, message: access.reason });
     }
 
-    let data = filterWritableFields(tableName, normalizeInsertData(tableName, mapToSnakeCase(req.body, tableName)));
+    // Row-level authorization: check create permission for this table
+    const createAccess = canCreateRecord(req.user, tableName);
+    if (!createAccess.allowed) {
+      return res.status(403).json({ success: false, message: createAccess.reason });
+    }
+
+    let data = sanitizeUserWrite(
+      tableName,
+      filterWritableFields(tableName, normalizeInsertData(tableName, mapToSnakeCase(req.body, tableName))),
+      req.user
+    );
 
     // ─── Collaboration-table write normalization ───
     // Participant tables have no "owner" column — ownership/membership is
@@ -1090,6 +1137,36 @@ router.post('/:table', async (req, res) => {
         .map(String).some(id => identityIds.includes(id));
       if (!isParty) {
         return res.status(403).json({ success: false, message: 'You are not a participant in this call' });
+      }
+    } else if (tableName === 'signaling') {
+      // Signaling messages are the WebRTC control plane — only channel
+      // participants may write, and the sender is always the authenticated
+      // user (never a client-supplied id).
+      if (!data.call_id) {
+        return res.status(400).json({ success: false, message: 'call_id is required' });
+      }
+      const ALLOWED_SIGNAL_TYPES = ['presence', 'offer', 'answer', 'ice-candidate', 'end', 'reject', 'busy', 'cancel'];
+      if (data.type && !ALLOWED_SIGNAL_TYPES.includes(data.type)) {
+        return res.status(400).json({ success: false, message: 'Invalid signaling message type' });
+      }
+      const allowed = await canSignalChannel(req.user, data.call_id);
+      if (!allowed) {
+        return res.status(403).json({ success: false, message: 'You are not a participant in this channel' });
+      }
+      data.from = req.user.id;
+    } else if (tableName === 'telemedicine_calls') {
+      // Both parties create a call row when joining the same appointment —
+      // dedup on appointment_id and require the creator to be a party.
+      if (!data.appointment_id) {
+        return res.status(400).json({ success: false, message: 'appointment_id is required' });
+      }
+      const allowed = await canSignalChannel(req.user, `consult_${data.appointment_id}`);
+      if (!allowed) {
+        return res.status(403).json({ success: false, message: 'You are not a participant in this appointment' });
+      }
+      const existing = await db('telemedicine_calls').where({ appointment_id: data.appointment_id }).first();
+      if (existing) {
+        return res.status(200).json({ success: true, data: stripSensitiveFields(mapToCamelCase(existing)) });
       }
     } else if (tableName === 'telemedicine_appointments') {
       // Persist request context fields the form sends
@@ -1217,6 +1294,18 @@ router.post('/:table', async (req, res) => {
 
     res.status(201).json({ success: true, data: responseData });
   } catch (error) {
+    // Unique-violation on telemedicine_calls.appointment_id — the other party
+    // won the join race; return the canonical row instead of failing.
+    if (error && error.code === '23505' && req.params.table === 'telemedicine_calls') {
+      const apptId = req.body.appointmentId || req.body.appointment_id;
+      try {
+        const existing = apptId &&
+          await db('telemedicine_calls').where({ appointment_id: apptId }).first();
+        if (existing) {
+          return res.status(200).json({ success: true, data: stripSensitiveFields(mapToCamelCase(existing)) });
+        }
+      } catch (_) { /* fall through to generic error */ }
+    }
     logger.error(`Failed to create ${req.params.table}:`, error);
     // Include the DB error detail so the client can surface a useful message
     // (e.g. missing column) instead of a generic failure toast.
@@ -1308,6 +1397,13 @@ router.put('/:table/:id', async (req, res) => {
     const canModify = await canModifyRecord(req.user, tableName, existingRecord);
     if (!canModify) {
       return res.status(403).json({ success: false, message: 'You do not have permission to modify this record' });
+    }
+
+    // Non-admin callers may never change role/security fields on users,
+    // even on their own record (privilege escalation prevention).
+    data = sanitizeUserWrite(tableName, data, req.user);
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid fields to update' });
     }
 
     // Patients cannot change ownership of their records
@@ -1435,12 +1531,35 @@ router.post('/:table/bulk', async (req, res) => {
     if (!validateTable(table)) {
       return res.status(400).json({ success: false, message: 'Invalid table name' });
     }
+    if (NO_TABLE_COLLECTIONS.includes(table)) {
+      return res.status(400).json({
+        success: false,
+        message: `Collection '${table}' does not have a backing database table.`
+      });
+    }
     const tableName = resolveTable(table);
 
     // Row-level authorization: check table access
     const access = canAccessTable(req.user.user_type, tableName);
     if (!access.allowed) {
       return res.status(403).json({ success: false, message: access.reason });
+    }
+
+    // Row-level authorization: same create policy as single-record POST
+    const createAccess = canCreateRecord(req.user, tableName);
+    if (!createAccess.allowed) {
+      return res.status(403).json({ success: false, message: createAccess.reason });
+    }
+
+    // Participation-checked tables must go through the single-record POST
+    // path — bulk rows carry independent channel/parent references that this
+    // handler cannot validate, so bulk would bypass the write guards.
+    const PER_RECORD_GUARD_TABLES = [...PARTICIPANT_TABLES, 'telemedicine_calls', 'telemedicine_appointments', 'telemedicine_recordings', 'clients'];
+    if (PER_RECORD_GUARD_TABLES.includes(tableName)) {
+      return res.status(400).json({
+        success: false,
+        message: `Bulk insert is not supported for '${tableName}'. Create records individually.`
+      });
     }
 
     const records = req.body.records || req.body;
@@ -1463,6 +1582,12 @@ router.post('/:table/bulk', async (req, res) => {
       try {
         let data = filterWritableFields(tableName, mapToSnakeCase(r));
         delete data.id;
+        // Same protections as the single-record POST path
+        data = sanitizeUserWrite(tableName, data, req.user);
+        if (PATIENT_ROLES.includes(req.user.user_type) && !PARTICIPANT_TABLES.includes(tableName)) {
+          const ownerCol = OWNER_COLUMN[tableName];
+          if (ownerCol && ownerCol !== 'id') data[ownerCol] = req.user.id;
+        }
         if (tableCols) {
           for (const k of Object.keys(data)) {
             if (!tableCols.has(k)) delete data[k];

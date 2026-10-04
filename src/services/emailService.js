@@ -11,6 +11,17 @@ import { functions } from '../backend/config';
 
 const API_BASE_URL = environmentConfig.getApiBaseUrl();
 
+// /api/email/* requires authentication. Send the httpOnly cookie
+// (web, same-origin) and a Bearer token (native builds store the JWT in
+// localStorage instead of a cookie).
+const postEmail = (path, payload) => {
+  const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+  return axios.post(`${API_BASE_URL}/api${path}`, payload, {
+    withCredentials: true,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+};
+
 /**
  * Send a task assignment email to a caregiver
  */
@@ -24,7 +35,7 @@ export const sendTaskAssignedEmail = async ({
   instructions
 }) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/email/task-assignment`, {
+    const response = await postEmail('/email/task-assignment', {
       to,
       taskTitle,
       taskDescription: instructions,
@@ -44,7 +55,7 @@ export const sendTaskAssignedEmail = async ({
  */
 export const sendPasswordResetEmail = async ({ to, resetLink, userName }) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/email/password-reset`, {
+    const response = await postEmail('/email/password-reset', {
       to,
       resetLink,
       userName
@@ -90,7 +101,7 @@ export const requestPasswordReset = async ({ email }) => {
  */
 export const sendWelcomeEmail = async ({ to, userName, institutionName }) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/email/welcome`, {
+    const response = await postEmail('/email/welcome', {
       to,
       userName,
       institutionName
@@ -108,7 +119,7 @@ export const sendWelcomeEmail = async ({ to, userName, institutionName }) => {
  */
 export const send2FACodeEmail = async ({ to, code }) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/email/2fa`, {
+    const response = await postEmail('/email/2fa', {
       to,
       code
     });
@@ -125,7 +136,7 @@ export const send2FACodeEmail = async ({ to, code }) => {
  */
 export const sendGenericEmail = async ({ to, subject, html, text }) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/email/generic`, {
+    const response = await postEmail('/email/generic', {
       to,
       subject,
       html,

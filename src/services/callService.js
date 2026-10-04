@@ -475,7 +475,7 @@ class CallService {
       let combined = [...outgoing, ...incoming].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 
       if (filter === 'missed') {
-        combined = combined.filter(c => (c.direction === 'incoming') && (c.status === 'initiating' || c.status === 'rejected'));
+        combined = combined.filter(c => (c.direction === 'incoming') && (c.status === 'initiating' || c.status === 'rejected' || c.status === 'missed'));
       } else if (filter === 'received') {
         combined = combined.filter(c => (c.direction === 'incoming') && c.status === 'answered');
       } else if (filter === 'outgoing') {
@@ -507,7 +507,7 @@ class CallService {
       const stats = {
         totalCalls: calls.length,
         answeredCalls: calls.filter(call => call.status === 'answered').length,
-        missedCalls: calls.filter(call => call.status === 'rejected' || call.status === 'initiating').length,
+        missedCalls: calls.filter(call => call.status === 'rejected' || call.status === 'initiating' || call.status === 'missed').length,
         totalDuration: calls.reduce((total, call) => total + (call.duration || 0), 0),
         averageDuration: 0,
         videoCalls: calls.filter(call => call.callType === 'video').length,

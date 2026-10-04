@@ -53,20 +53,29 @@ export const createConversation = async (participants, conversationType = 'gener
   }
 };
 
-// Get conversations for a user
-export const getConversationsByUser = async (userId) => {
+// Get conversations for a user — accepts a single id or an array of identity
+// ids (users.id, clients row id, legacy firebase uid) so legacy conversations
+// stored under an alternate id aren't missed.
+export const getConversationsByUser = async (userIdOrIds) => {
+  const userIds = [...new Set(
+    (Array.isArray(userIdOrIds) ? userIdOrIds : [userIdOrIds])
+      .filter(Boolean)
+      .map(String)
+  )];
   try {
     const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
-    
+    const isParticipant = (participants) =>
+      Array.isArray(participants) && participants.some((p) => userIds.includes(String(p)));
+
     // Try the optimized query first
     try {
       const q = query(
-        conversationsRef, 
-        where('participants', 'array-contains', userId),
+        conversationsRef,
+        where('participants', 'array-contains-any', userIds),
         orderBy('lastMessageTime', 'desc')
       );
       const querySnapshot = await getDocs(q);
-      
+
       const conversations = [];
       querySnapshot.forEach((doc) => {
         const conversationData = doc.data();
@@ -78,19 +87,19 @@ export const getConversationsByUser = async (userId) => {
           updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
         });
       });
-      
+
       return conversations;
     } catch (indexError) {
       console.log('Index not ready, using fallback query');
-      
+
       // Fallback: get all conversations and filter client-side
       const q = query(conversationsRef);
       const querySnapshot = await getDocs(q);
-      
+
       const conversations = [];
       querySnapshot.forEach((doc) => {
         const conversationData = doc.data();
-        if (conversationData.participants && conversationData.participants.includes(userId)) {
+        if (isParticipant(conversationData.participants)) {
           conversations.push({
             id: doc.id,
             ...conversationData,
@@ -462,24 +471,35 @@ export const subscribeToConversationMessages = (conversationId, callback, messag
   );
 };
 
-// Real-time listener for conversations with optimized query and fallback
-export const subscribeToUserConversations = (userId, callback) => {
-  if (!userId) {
+// Real-time listener for conversations with optimized query and fallback.
+// Accepts a single user id or an array of identity ids — a user can appear in
+// participants under several ids (canonical users.id, clients row id, legacy
+// firebase uid), so matching against all of them prevents conversations from
+// silently disappearing when the profile identity flips.
+export const subscribeToUserConversations = (userIdOrIds, callback) => {
+  const userIds = [...new Set(
+    (Array.isArray(userIdOrIds) ? userIdOrIds : [userIdOrIds])
+      .filter(Boolean)
+      .map(String)
+  )];
+  if (!userIds.length) {
     console.error('User ID is required for real-time conversation listener');
     return () => {}; // Return empty unsubscribe function
   }
-  
+
   const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
-  
+  const isParticipant = (participants) =>
+    Array.isArray(participants) && participants.some((p) => userIds.includes(String(p)));
+
   // Helper to process conversations data
   const processConversations = (querySnapshot, isFallback = false) => {
     const conversations = [];
-    
+
     querySnapshot.forEach((doc) => {
       const conversationData = doc.data();
-      
-      // Filter for current user's conversations
-      if (!conversationData.participants?.includes(userId)) {
+
+      // Filter for current user's conversations (any known identity id)
+      if (!isParticipant(conversationData.participants)) {
         return; // Skip conversations user is not in
       }
       
@@ -503,10 +523,13 @@ export const subscribeToUserConversations = (userId, callback) => {
     callback(conversations);
   };
   
-  // Try optimized query with proper index
+  // Backend row scoping already restricts non-admins to conversations where
+  // ANY of their identity ids is a participant — so no server-side where is
+  // needed here (and a single-id array-contains would hide legacy rows that
+  // only carry an alternate identity). Client-side filtering above applies
+  // the same any-of-ids check for admin accounts that can see more rows.
   const q = query(
     conversationsRef,
-    where('participants', 'array-contains', userId),
     orderBy('lastMessageTime', 'desc')
   );
   

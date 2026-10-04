@@ -579,9 +579,14 @@ const PartnerCaregiverDashboard = () => {
         caregiverId: assignment.caregiverId,
         status: assignment.status || 'pending',
         priority: assignment.priority || 'normal',
-        dueDate: assignment.dueDate,
+        // Resumption (start) vs closing (end): assignments now carry both.
+        // start_date/end_date hold full datetimes; due_date+due_time is the
+        // legacy closing pair kept for compatibility.
+        startDate: assignment.startDate,
+        endDate: assignment.endDate,
+        dueDate: assignment.dueDate || assignment.endDate,
         dueTime: assignment.dueTime,
-        scheduledTime: assignment.dueDate, // Map dueDate to scheduledTime for compatibility
+        scheduledTime: assignment.startDate || assignment.dueDate || assignment.endDate,
         instructions: assignment.instructions,
         createdAt: assignment.createdAt instanceof Date ? assignment.createdAt.toISOString() : (assignment.createdAt?.toDate?.()?.toISOString() || assignment.createdAt),
         collection: 'clientAssignments', // Mark which collection this came from
@@ -3998,14 +4003,51 @@ const PartnerCaregiverDashboard = () => {
           </div>
                           )}
                           
-                          {(task.scheduledTime || task.dueDate) && (
-                            <div className="flex items-center space-x-2">
-                              <Clock className="h-4 w-4 text-gray-400" />
-                              <span className="text-gray-700">
-                                <span className="font-medium">Due:</span> {new Date(task.scheduledTime || task.dueDate).toLocaleString()}
-                              </span>
-                            </div>
-                          )}
+                          {(() => {
+                            // Task window: scheduledTime/startDate = resumption,
+                            // endDate/dueDate(+dueTime) = closing. Legacy rows
+                            // carry only one instant → show a single "Due".
+                            const start = task.scheduledTime || task.startDate;
+                            const endBase = task.endDate || task.dueDate;
+                            const end = (() => {
+                              if (!endBase) return null;
+                              if (task.dueTime && typeof endBase === 'string' && !/[T ]\d{2}:?\d{2}/.test(endBase)) {
+                                return `${endBase}T${task.dueTime}`;
+                              }
+                              return endBase;
+                            })();
+                            const startD = start ? new Date(start) : null;
+                            const endD = end ? new Date(end) : null;
+                            const valid = (d) => d && !isNaN(d.getTime());
+                            if (!valid(startD) && !valid(endD)) return null;
+                            if (!valid(startD) || !valid(endD) || startD.getTime() === endD.getTime()) {
+                              const single = valid(endD) ? endD : startD;
+                              return (
+                                <div className="flex items-center space-x-2">
+                                  <Clock className="h-4 w-4 text-gray-400" />
+                                  <span className="text-gray-700">
+                                    <span className="font-medium">Due:</span> {single.toLocaleString()}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <>
+                                <div className="flex items-center space-x-2">
+                                  <Clock className="h-4 w-4 text-gray-400" />
+                                  <span className="text-gray-700">
+                                    <span className="font-medium">Start:</span> {startD.toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Clock className="h-4 w-4 text-gray-400" />
+                                  <span className="text-gray-700">
+                                    <span className="font-medium">End:</span> {endD.toLocaleString()}
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          })()}
                           
                           {task.priority && (
                             <div className="flex items-center space-x-2">

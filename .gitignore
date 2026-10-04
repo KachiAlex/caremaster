@@ -77,3 +77,8 @@ gcloud-info.json
 *.backup
 *.bak
 backend/.vapid-keys.json
+
+# Android signing keys — keep keystores and passwords out of git
+*.keystore
+*.jks
+key.properties

@@ -69,9 +69,10 @@ const EnhancedMessagingInterface = () => {
 
   // Resolve the other participant in a 1:1 conversation to a user object.
   // Prefers the institution users list, then denormalized participantDetails.
-  const resolveOtherUser = (conversation, userId, userList) => {
+  const resolveOtherUser = (conversation, userIdOrIds, userList) => {
+    const myIds = new Set((Array.isArray(userIdOrIds) ? userIdOrIds : [userIdOrIds]).map(String));
     const otherParticipantId = (conversation.participants || [])
-      .find(id => String(id) !== String(userId));
+      .find(id => !myIds.has(String(id)));
     if (!otherParticipantId) return conversation;
 
     const found = (userList || []).find(u => String(u.id) === String(otherParticipantId));
@@ -110,6 +111,7 @@ const EnhancedMessagingInterface = () => {
       try {
         setLoading(true);
         const userId = userProfile.id || userProfile.uid;
+        const identityIds = [userId, userProfile.clientId, userProfile.uid].filter(Boolean).map(String);
         console.log('Loading messaging data for user:', userId);
         
         // Initialize online status
@@ -135,11 +137,11 @@ const EnhancedMessagingInterface = () => {
         }
         
         // Load conversations
-        const userConversations = await getConversationsByUser(userId);
+        const userConversations = await getConversationsByUser(identityIds);
         
         // Populate otherUser for each conversation
         const conversationsWithUsers = await Promise.all(
-          userConversations.map(async (conversation) => resolveOtherUser(conversation, userId, filteredUsers))
+          userConversations.map(async (conversation) => resolveOtherUser(conversation, identityIds, filteredUsers))
         );
         
         setConversations(conversationsWithUsers);
@@ -187,10 +189,11 @@ const EnhancedMessagingInterface = () => {
     if (!userProfile || (!userProfile.id && !userProfile.uid)) return;
 
     const userId = userProfile.id || userProfile.uid;
-    const unsubscribe = subscribeToUserConversations(userId, (updatedConversations) => {
+    const identityIds = [userId, userProfile.clientId, userProfile.uid].filter(Boolean).map(String);
+    const unsubscribe = subscribeToUserConversations(identityIds, (updatedConversations) => {
       // Populate otherUser for each conversation
       const conversationsWithUsers = updatedConversations.map((conversation) =>
-        resolveOtherUser(conversation, userId, allUsers)
+        resolveOtherUser(conversation, identityIds, allUsers)
       );
 
       setConversations(conversationsWithUsers);
@@ -720,8 +723,8 @@ const EnhancedMessagingInterface = () => {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.map((message) => {
-                const userId = userProfile?.id || userProfile?.uid;
-                const isOwnMessage = message.senderId === userId;
+                const myIds = [userProfile?.id, userProfile?.clientId, userProfile?.uid].filter(Boolean).map(String);
+                const isOwnMessage = myIds.includes(String(message.senderId));
                 
                 return (
                   <div

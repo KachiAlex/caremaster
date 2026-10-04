@@ -30,8 +30,11 @@ module.exports = {
     }
   },
   transform: {
-    '^.+\\.(js|jsx)$': 'babel-jest'
+    '^.+\\.(js|jsx)$': '<rootDir>/jest.babel-transformer.js'
   },
+  transformIgnorePatterns: [
+    '/node_modules/(?!(axios)/)'
+  ],
   moduleFileExtensions: ['js', 'jsx', 'json'],
   testPathIgnorePatterns: [
     '/node_modules/',

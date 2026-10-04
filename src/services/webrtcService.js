@@ -47,7 +47,7 @@ class WebRTCService {
       try {
         const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
         const baseUrl = process.env.REACT_APP_API_URL || '';
-        const res = await fetch(`${baseUrl}/api/turn-credentials`, {
+        const res = await fetch(`${baseUrl}/turn-credentials`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         if (res.ok) {
@@ -536,22 +536,54 @@ class WebRTCService {
     }
   }
 
+  // Best-effort 'end' signal for page unload — a regular fetch is cancelled
+  // when the tab closes, keepalive keeps the request alive past unload.
+  sendEndBeacon() {
+    try {
+      if (!this.callId) return;
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      fetch(`${baseUrl}/data/signaling`, {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          callId: this.callId,
+          type: 'end',
+          timestamp: new Date().toISOString()
+        }),
+      }).catch(() => {});
+    } catch { /* best effort — never block unload */ }
+  }
+
   // Get call history
   async getCallHistory(userId, resultLimit = 50) {
     try {
-      const callsQuery = query(
-        collection(db, 'calls'),
-        where('callerId', '==', userId),
-        orderBy('createdAt', 'desc'),
-        limit(resultLimit)
-      );
+      // Outgoing + incoming calls, merged client-side (the query layer
+      // supports single-field equality only)
+      const [outgoing, incoming] = await Promise.all([
+        getDocs(query(
+          collection(db, 'calls'),
+          where('callerId', '==', userId),
+          orderBy('createdAt', 'desc'),
+          limit(resultLimit)
+        )),
+        getDocs(query(
+          collection(db, 'calls'),
+          where('recipientId', '==', userId),
+          orderBy('createdAt', 'desc'),
+          limit(resultLimit)
+        )),
+      ]);
 
-      // Use a one-time fetch instead of opening/closing a real-time subscription.
-      const snapshot = await getDocs(callsQuery);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const byId = new Map();
+      [...outgoing.docs, ...incoming.docs].forEach(d => byId.set(d.id, { id: d.id, ...d.data() }));
+      return [...byId.values()]
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, resultLimit);
     } catch (error) {
       console.error('Error getting call history:', error);
       throw error;

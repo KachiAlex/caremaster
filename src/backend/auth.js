@@ -42,7 +42,16 @@ async function apiFetch(path, options = {}) {
 
   // Include cookies so the backend can read the httpOnly token cookie on web.
   // Native apps fall back to the Authorization header populated from localStorage.
-  const res = await fetch(url, { ...options, headers, credentials: 'include' });
+  // Auth requests are bounded — a stalled /auth/me must not hang session restore.
+  const { timeout = 15000, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  let res;
+  try {
+    res = await fetch(url, { ...fetchOptions, headers, credentials: 'include', signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
   const text = await res.text();
   let body;
   try { body = text ? JSON.parse(text) : {}; } catch { body = { raw: text }; }
@@ -206,9 +215,12 @@ export const unlockUserAccount = ({ userId, email } = {}) => {
 export const sendEmailVerification = (_user) => Promise.resolve();
 
 export const verifyPasswordResetCode = (_auth, _code) =>
-  Promise.resolve('reset@example.com');
-export const confirmPasswordReset = (_auth, _code, _password) =>
-  Promise.resolve();
+  Promise.reject(new Error('verifyPasswordResetCode is not supported — use the /reset-password page'));
+export const confirmPasswordReset = (_auth, code, newPassword) =>
+  apiFetch('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token: code, password: newPassword }),
+  });
 export const applyActionCode = (_auth, _code) => Promise.resolve();
 
 export const getIdToken = (_user, _forceRefresh) =>

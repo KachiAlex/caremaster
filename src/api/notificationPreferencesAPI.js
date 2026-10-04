@@ -51,6 +51,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES = {
   prescription_updates: true,
   consultation_updates: true,
   care_log_updates: true,
+  email_notifications: true,
   system_updates: false,
 };
 
@@ -64,6 +65,7 @@ export const PREFERENCE_LABELS = {
   prescription_updates: 'Prescription Updates',
   consultation_updates: 'Consultation Updates',
   care_log_updates: 'Care Log Updates',
+  email_notifications: 'Email Notifications',
   system_updates: 'System Updates',
 };
 

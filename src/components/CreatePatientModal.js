@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { createClient, createClientLoginAccount, updatePatient } from '../api/patientsAPI';
 import { createRegistrationDraft, updateRegistrationDraft, deleteRegistrationDraft } from '../api/registrationDraftsAPI';
+import { saveDraftFiles, getDraftFiles, deleteDraftFiles } from '../utils/draftFileStore';
 import { getBillingPlans, assignSubscriptionToClient, BILLING_FREQUENCIES } from '../api/billingPlansAPI';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
@@ -175,6 +176,19 @@ const CreateClientModal = ({ open, onClose, onSuccess, resumeDraft, onDraftChang
     if (draftLoadedRef.current) return;
     draftLoadedRef.current = true;
 
+    // Re-attach any documents that were selected before the interruption —
+    // File objects live in IndexedDB (they can't go in the JSON draft).
+    getDraftFiles(draftKey)
+      .then((files) => {
+        const restored = Object.keys(files);
+        if (restored.length > 0) {
+          setUploadedDocuments(prev => ({ ...prev, ...files }));
+          setDraftRestored(true);
+          toast.info(`Restored ${restored.length} previously selected document${restored.length > 1 ? 's' : ''}`, { autoClose: 4000 });
+        }
+      })
+      .catch(() => { /* IndexedDB unavailable — files simply can't persist */ });
+
     if (resumeDraft?.formData && formHasContent(resumeDraft.formData)) {
       setFormData(prev => ({ ...prev, ...resumeDraft.formData, loginPassword: '', confirmPassword: '' }));
       setCurrentStep(resumeDraft.currentStep >= 1 && resumeDraft.currentStep <= 4 ? resumeDraft.currentStep : 1);
@@ -218,6 +232,16 @@ const CreateClientModal = ({ open, onClose, onSuccess, resumeDraft, onDraftChang
     }, 600);
     return () => clearTimeout(t);
   }, [formData, currentStep, nationalId, open, createdPatientId, draftKey]);
+
+  // Persist selected document files alongside the draft (IndexedDB) so an
+  // interruption doesn't force the user to re-select them.
+  React.useEffect(() => {
+    if (!open || createdPatientId) return;
+    const t = setTimeout(() => {
+      saveDraftFiles(draftKey, uploadedDocuments).catch(() => {});
+    }, 600);
+    return () => clearTimeout(t);
+  }, [uploadedDocuments, open, createdPatientId, draftKey]);
 
   // Debounced server-side draft save — runs a beat after the local save so a
   // draft row exists for cross-device resume and the admin drafts list.
@@ -287,6 +311,7 @@ const CreateClientModal = ({ open, onClose, onSuccess, resumeDraft, onDraftChang
 
   const clearDraft = () => {
     try { localStorage.removeItem(draftKey); } catch {}
+    deleteDraftFiles(draftKey).catch(() => {});
     if (serverDraftIdRef.current) {
       deleteRegistrationDraft(serverDraftIdRef.current).catch(() => {});
       setServerDraftId(null);
@@ -311,6 +336,13 @@ const CreateClientModal = ({ open, onClose, onSuccess, resumeDraft, onDraftChang
       subscriptionPlanId: '', billingCycle: 'monthly'
     });
     setNationalId('');
+    setUploadedDocuments({
+      idCard: null,
+      referralLetter: null,
+      medicalRecord: null,
+      insuranceCard: null,
+      clinicalNotes: null
+    });
     setCurrentStep(1);
     toast.info('Draft discarded');
   };
@@ -586,10 +618,12 @@ const CreateClientModal = ({ open, onClose, onSuccess, resumeDraft, onDraftChang
     }
   };
 
-  // Upload documents after Client creation
+  // Upload documents after Client creation. Returns { uploaded, failed } —
+  // failures are reported to the user instead of silently swallowed.
   const uploadDocumentsAfterRegistration = async (clientId) => {
-    const uploadResults = [];
-    
+    const uploaded = [];
+    const failed = [];
+
     for (const [docType, docData] of Object.entries(uploadedDocuments)) {
       if (docData && docData.file) {
         try {
@@ -600,18 +634,28 @@ const CreateClientModal = ({ open, onClose, onSuccess, resumeDraft, onDraftChang
             docType
           );
           if (result && result.success) {
-            uploadResults.push(result);
+            uploaded.push(result);
+          } else {
+            failed.push(docType);
           }
         } catch (error) {
           console.error(`Error uploading ${docType}:`, error);
+          failed.push(docType);
         }
       }
     }
 
-    if (uploadResults.length > 0) {
+    if (uploaded.length > 0 && failed.length === 0) {
       toast.success('Documents uploaded successfully');
     }
-    return uploadResults;
+    if (failed.length > 0) {
+      toast.warning(
+        `${failed.length} document${failed.length > 1 ? 's' : ''} could not be uploaded. ` +
+        `Re-upload ${failed.length > 1 ? 'them' : 'it'} later from the client's record.`,
+        { autoClose: 8000 }
+      );
+    }
+    return { uploaded, failed };
   };
 
   const handleSubmit = async (e, skipDuplicateCheck = false) => {
@@ -775,18 +819,17 @@ const CreateClientModal = ({ open, onClose, onSuccess, resumeDraft, onDraftChang
       }
       
       // Upload documents after Client creation (non-blocking - don't fail if upload fails)
-      let documentResults = [];
       if (Object.values(uploadedDocuments).some(doc => doc !== null)) {
         try {
-          documentResults = await uploadDocumentsAfterRegistration(result.clientId);
-          
+          const { uploaded: documentResults } = await uploadDocumentsAfterRegistration(result.clientId);
+
           // CRITICAL FIX: Save the uploaded document URLs back to the client record
           if (documentResults.length > 0) {
             const documentMap = {};
             documentResults.forEach(dr => {
               documentMap[`${dr.documentType}Url`] = dr.url;
             });
-            
+
             await updatePatient(result.id, {
               metadata: {
                 ...clientData.metadata,
