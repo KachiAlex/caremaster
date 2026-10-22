@@ -5,7 +5,7 @@
  */
 const http = require('http');
 
-const BASE = 'http://localhost:5002/api';
+const BASE = process.env.API_BASE || 'http://localhost:5000/api';
 let AUTH_COOKIE = null;
 
 function httpRequest(method, path, body, token) {
@@ -315,9 +315,97 @@ function httpRequest(method, path, body, token) {
     `status=${notifHistoryRes.status}, count=${notifHistoryRes.body.data ? (Array.isArray(notifHistoryRes.body.data) ? notifHistoryRes.body.data.length : 1) : 0}`);
 
   // ============================================================
+  // RECIPIENT DELIVERY TESTS (caregiver -> admin, the reported bug path)
+  // ============================================================
+  console.log('\n=== RECIPIENT DELIVERY TESTS (caregiver calls admin) ===');
+
+  // Test 17: inbound call record (caregiver calling the admin)
+  const inboundCallId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const inboundCallRes = await httpRequest('POST', '/data/calls', {
+    callId: inboundCallId,
+    callerId: caregiverId,
+    recipientId: adminId,
+    callType: 'video',
+    callerName: 'Message TestUser',
+    recipientName: 'Test Admin',
+    status: 'initiating',
+    createdAt: new Date().toISOString()
+  }, token);
+  const inboundCallRowId = inboundCallRes.body?.data?.id;
+  log('Inbound call created (caregiver -> admin)',
+    inboundCallRes.status === 201 && inboundCallRes.body.success,
+    `status=${inboundCallRes.status}`);
+
+  // Test 18: ring notification addressed to the admin
+  const ringNotifRes = await httpRequest('POST', '/data/callNotifications', {
+    userId: adminId,
+    callId: inboundCallId,
+    callerId: caregiverId,
+    callType: 'video',
+    status: 'incoming',
+    callerName: 'Message TestUser',
+    timestamp: new Date().toISOString()
+  }, token);
+  const ringNotifId = ringNotifRes.body?.data?.id;
+  log('Ring notification addressed to admin created',
+    ringNotifRes.status === 201 && ringNotifRes.body.success,
+    `status=${ringNotifRes.status}`);
+
+  // Test 19: recipient listener query — the exact fetch GlobalCallHandler/
+  // listenForIncomingCalls performs (userId filter + timestamp ordering).
+  const listenerRes = await httpRequest('GET',
+    `/data/callNotifications?userId=${adminId}&orderBy=timestamp&order=desc`, null, token);
+  const delivered = (listenerRes.body.data || []).find(
+    n => n.callId === inboundCallId && n.status === 'incoming');
+  log('Incoming call visible to recipient via listener query',
+    !!delivered && listenerRes.status === 200,
+    `found=${!!delivered}, rows=${(listenerRes.body.data || []).length}`);
+
+  // Test 20: timestamp freshness — regression check for the naive-TIMESTAMP
+  // server-TZ skew that made every ring look 2h old and auto-expire.
+  const notifAge = delivered
+    ? (Date.now() - new Date(delivered.timestamp).getTime()) / 1000
+    : null;
+  log('Notification timestamp inside 120s ring window',
+    notifAge !== null && notifAge >= 0 && notifAge < 120,
+    `age=${notifAge === null ? 'n/a' : notifAge.toFixed(1) + 's'}, ts=${delivered && delivered.timestamp}`);
+
+  // Test 21: signaling readable by the callee for the video call
+  const sigReadRes = await httpRequest('GET',
+    `/data/signaling?callId=${videoCallId || inboundCallId}&orderBy=timestamp&order=asc`, null, token);
+  log('Signaling messages readable for call',
+    sigReadRes.status === 200 && sigReadRes.body.success &&
+      (sigReadRes.body.data || []).length >= 2,
+    `status=${sigReadRes.status}, rows=${(sigReadRes.body.data || []).length}`);
+
+  // Test 22: reject path — call status + notification status
+  if (inboundCallRowId) {
+    const rejectCallRes = await httpRequest('PUT', `/data/calls/${inboundCallRowId}`, {
+      status: 'rejected',
+      endedAt: new Date().toISOString()
+    }, token);
+    const rejectNotifRes = ringNotifId
+      ? await httpRequest('PUT', `/data/callNotifications/${ringNotifId}`, {
+          status: 'rejected',
+          updatedAt: new Date().toISOString()
+        }, token)
+      : { status: 0, body: {} };
+    log('Call rejected (calls + notification status updated)',
+      rejectCallRes.status === 200 && rejectCallRes.body.success &&
+        rejectNotifRes.status === 200 && rejectNotifRes.body.success,
+      `call=${rejectCallRes.status}, notif=${rejectNotifRes.status}`);
+  }
+
+  // ============================================================
   // CLEANUP
   // ============================================================
   console.log('\n=== Cleanup ===');
+  if (inboundCallRowId) {
+    await httpRequest('DELETE', `/data/calls/${inboundCallRowId}`, null, token);
+  }
+  if (ringNotifId) {
+    await httpRequest('DELETE', `/data/callNotifications/${ringNotifId}`, null, token);
+  }
   try {
     // Delete test messages, conversations, calls, notifications, and user
     if (messageId && messageId !== 'no-table') {
