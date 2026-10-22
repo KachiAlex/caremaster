@@ -12,7 +12,7 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { getAppointmentsByClient, createAppointment } from '../api/appointmentsAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
-import { notifyAdmins, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../services/notificationService';
+
 import { toast } from 'react-toastify';
 
 const Appointments = () => {
@@ -151,31 +151,10 @@ const Appointments = () => {
       console.log('Creating appointment with data:', appointmentData);
       const appointmentId = await createAppointment(appointmentData);
       console.log('Appointment created successfully:', appointmentId);
-      
+
+      // The backend notifies institution admins via notificationDispatcher.
       toast.success('Care visit scheduled successfully!');
-      
-      // Notify institution admins of the new care request
-      const institutionId = userProfile?.institutionId || contextInstitutionId || null;
-      if (institutionId) {
-        try {
-          await notifyAdmins(institutionId, {
-            type: NOTIFICATION_TYPES.APPOINTMENT,
-            title: 'New Care Visit Request',
-            message: `${userProfile?.name || user?.displayName || 'A client'} requested a ${formData.careType} visit${formData.preferredDate ? ` for ${formData.preferredDate}` : ''}.`,
-            priority: NOTIFICATION_PRIORITIES.MEDIUM,
-            navigateTo: '/institution-admin/dashboard',
-            deduplicationKey: `care-request:${appointmentId}`,
-            metadata: {
-              appointmentId,
-              clientName: userProfile?.name || user?.displayName || 'Client',
-              careType: formData.careType,
-            },
-          });
-        } catch (notifErr) {
-          console.warn('Failed to send admin notification:', notifErr);
-        }
-      }
-      
+
       // Reset form
       setFormData({
         careType: 'Blood Pressure Check',

@@ -18,11 +18,10 @@ import DocumentManager from '../components/DocumentManager';
 import ConsultationCall from '../components/ConsultationCall';
 import { auth } from '../backend/config';
 import { useUser } from '../contexts/UserContext';
-import { notifyAdmins, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../services/notificationService';
 
 const Telemedicine = () => {
   const [user, userLoading] = useAuthState(auth);
-  const { userProfile, institutionId: contextInstitutionId } = useUser();
+  const { userProfile } = useUser();
   const [appointments, setAppointments] = useState([]);
   // The appointment the user is currently in a video call for (or null)
   const [activeCall, setActiveCall] = useState(null);
@@ -119,7 +118,13 @@ const Telemedicine = () => {
         telemedicineAPI.updateAppointmentStatus(ended.id, 'completed').catch(() => {});
       }
     } else if (ended?.id) {
-      telemedicineAPI.updateAppointmentStatus(ended.id, 'completed').catch(() => {});
+      // If call never started (timeout, cancelled waiting), mark appointment as scheduled
+      // instead of completed since no actual call occurred
+      try {
+        await telemedicineAPI.updateAppointmentStatus(ended.id, 'scheduled').catch(() => {});
+      } catch (e) {
+        console.warn('Failed to reset appointment status:', e);
+      }
     }
 
     loadTelemedicineData();
@@ -169,30 +174,11 @@ const Telemedicine = () => {
         requestedBy: myUserId
       };
 
+      // The backend notifies institution admins via notificationDispatcher
+      // when the 'requested' appointment row is created.
       await telemedicineAPI.requestConsultation(requestData);
       toast.success('Video consultation request submitted. An admin will schedule a doctor for you.');
-      
-      // Notify institution admins of the new video consultation request
-      const institutionId = userProfile?.institutionId || contextInstitutionId || null;
-      if (institutionId) {
-        try {
-          await notifyAdmins(institutionId, {
-            type: NOTIFICATION_TYPES.CONSULTATION,
-            title: 'New Video Consultation Request',
-            message: `${userProfile?.name || user?.displayName || 'A client'} requested a video consultation${requestForm.reason ? `: ${requestForm.reason.substring(0, 80)}` : '.'}`,
-            priority: requestForm.urgency === 'urgent' ? NOTIFICATION_PRIORITIES.HIGH : NOTIFICATION_PRIORITIES.MEDIUM,
-            navigateTo: '/institution-admin/dashboard',
-            metadata: {
-              clientName: userProfile?.name || user?.displayName || 'Client',
-              reason: requestForm.reason,
-              urgency: requestForm.urgency,
-            },
-          });
-        } catch (notifErr) {
-          console.warn('Failed to send admin notification:', notifErr);
-        }
-      }
-      
+
       closeRequestModal();
       loadTelemedicineData();
     } catch (error) {

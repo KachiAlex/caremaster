@@ -63,8 +63,6 @@ import NurseReportCard from '../components/NurseReportCard';
 import GlobalAllergyAlert from '../components/GlobalAllergyAlert';
 import ReferralTracker from '../components/ReferralTracker';
 import { createVitalSign } from '../api/vitalSignsAPI';
-import CallService from '../services/callService';
-import CallInterface from '../components/CallInterface';
 
 const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onShowAppointments, onShowMessages }) => {
   const navigate = useNavigate();
@@ -371,9 +369,7 @@ const ServiceProviderDashboard = () => {
   });
   
   // Call-related states
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [activeCall, setActiveCall] = useState(null);
-  const [callService] = useState(() => new CallService());
+
 
   const loadDashboardData = async () => {
     if (!userProfile || !userRole) return;
@@ -530,84 +526,7 @@ const ServiceProviderDashboard = () => {
     loadDashboardData();
   }, [userProfile, userRole, isCaregiver]);
   
-  // Set up incoming call listener
-  useEffect(() => {
-    if (!userProfile || (!userProfile.id && !userProfile.uid)) {
-      return;
-    }
-    
-    const userId = userProfile.id || userProfile.uid;
-    console.log('ðŸŽ§ Setting up call listener for doctor:', userId);
-    
-    const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {
-      console.log('ðŸ“ž Incoming call notification:', callNotification);
-      
-      if (callNotification.status === 'incoming') {
-        setIncomingCall({
-          callId: callNotification.callId,
-          callerId: callNotification.callerId,
-          callType: callNotification.callType,
-          timestamp: callNotification.timestamp
-        });
-        toast.info(`Incoming ${callNotification.callType} call...`);
-      }
-    });
-    
-    return () => {
-      console.log('ðŸ”Œ Cleaning up call listener');
-      if (unsubscribe) unsubscribe();
-    };
-  }, [userProfile, callService]);
-
-  // Handle incoming call acceptance
-  const handleAcceptCall = async () => {
-    if (!incomingCall) return;
-    
-    try {
-      const userId = userProfile.id || userProfile.uid;
-      await callService.answerCall(incomingCall.callId, userId);
-      
-      setActiveCall({
-        callId: incomingCall.callId,
-        participantId: incomingCall.callerId,
-        participantName: 'Admin',
-        callType: incomingCall.callType
-      });
-      setIncomingCall(null);
-      console.log('âœ… Call accepted');
-    } catch (error) {
-      console.error('Error accepting call:', error);
-      toast.error('Failed to accept call');
-    }
-  };
-
-  // Handle incoming call rejection
-  const handleRejectCall = async () => {
-    if (!incomingCall) return;
-    
-    try {
-      const userId = userProfile.id || userProfile.uid;
-      await callService.rejectCall(incomingCall.callId, userId);
-      setIncomingCall(null);
-      console.log('âŒ Call rejected');
-    } catch (error) {
-      console.error('Error rejecting call:', error);
-      toast.error('Failed to reject call');
-    }
-  };
-
-  // Handle active call end
-  const handleEndCall = async () => {
-    if (!activeCall) return;
-    
-    try {
-      await callService.endCall(activeCall.callId);
-      setActiveCall(null);
-      console.log('âœ… Call ended');
-    } catch (error) {
-      console.error('Error ending call:', error);
-    }
-  };
+  // Incoming calls are handled app-wide by GlobalCallHandler (mounted in App).
 
   if (userLoading || loading) {
     return (
@@ -1321,37 +1240,6 @@ const ServiceProviderDashboard = () => {
         />
       )}
 
-      {/* Incoming Call Interface */}
-      {incomingCall && (
-        <CallInterface
-          isOpen={!!incomingCall}
-          onClose={handleRejectCall}
-          callType={incomingCall.callType}
-          participantInfo={{
-            id: incomingCall.callerId,
-            name: 'Admin',
-            role: 'admin'
-          }}
-          isIncoming={true}
-          onCallAccepted={handleAcceptCall}
-          onCallRejected={handleRejectCall}
-        />
-      )}
-      
-      {/* Active Call Interface */}
-      {activeCall && (
-        <CallInterface
-          isOpen={!!activeCall}
-          onClose={handleEndCall}
-          callType={activeCall.callType}
-          participantInfo={{
-            id: activeCall.participantId,
-            name: activeCall.participantName,
-            role: 'admin'
-          }}
-          isIncoming={false}
-        />
-      )}
     </div>
   );
 };

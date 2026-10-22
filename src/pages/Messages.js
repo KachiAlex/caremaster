@@ -28,7 +28,14 @@ import { buildConstraints } from '../services/deviceSettingsService';
 import { collection, query, where, onSnapshot } from 'backend/database';
 import { db } from '../backend/config';
 
-const Messages = () => {
+const Messages = ({
+  contactLoader,
+  newChatTitle = 'Start New Chat',
+  contactsLoadingText = 'Loading your caregivers...',
+  contactsEmptyTitle = 'No assigned caregivers found.',
+  contactsEmptyHint = 'Ask your institution to assign a caregiver to start chatting.',
+  containerClassName = 'h-[calc(100vh-8rem)] flex bg-white rounded-lg shadow-sm border border-gray-200',
+} = {}) => {
   const { user, userProfile } = useUser();
   const [searchParams] = useSearchParams();
   const deepLinkedConvRef = useRef(null);
@@ -45,7 +52,6 @@ const Messages = () => {
 
   // Call-related state
   const [callService] = useState(() => new CallService());
-  const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
   const [webrtc, setWebrtc] = useState(null);
   const [localStream, setLocalStream] = useState(null);
@@ -57,8 +63,8 @@ const Messages = () => {
 
   // New chat dialog
   const [showNewChat, setShowNewChat] = useState(false);
-  const [assignedCaregivers, setAssignedCaregivers] = useState([]);
-  const [loadingCaregivers, setLoadingCaregivers] = useState(false);
+  const [chatContacts, setChatContacts] = useState([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -157,34 +163,8 @@ const Messages = () => {
   const getOtherParticipantName = () => getOtherParticipant()?.name || 'Participant';
   const getOtherParticipantRole = () => getOtherParticipant()?.role || '';
 
-  // Listen for incoming calls
-  useEffect(() => {
-    const userId = userProfile?.id || userProfile?.uid || user?.uid;
-    if (!userId) return;
-
-    const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {
-      if (callNotification.status === 'incoming') {
-        setIncomingCall({
-          callId: callNotification.callId,
-          callerId: callNotification.callerId,
-          callerName: callNotification.callerName || 'Caller',
-          callType: callNotification.callType || 'video',
-        });
-      } else if (
-        // Reject/end notifications are new rows addressed to the caller — the
-        // polling shim never reports row *updates*, so this is how the caller
-        // learns the other side rejected or hung up.
-        (callNotification.status === 'rejected' || callNotification.status === 'ended') &&
-        activeCall && callNotification.callId === activeCall.callId
-      ) {
-        toast.info(callNotification.status === 'rejected' ? 'Call was rejected' : 'Call ended');
-        cleanupCall();
-        setActiveCall(null);
-      }
-    });
-
-    return () => { if (unsubscribe) unsubscribe(); };
-  }, [userProfile, user, callService, activeCall]);
+  // Incoming calls are handled globally by GlobalCallHandler (mounted in App)
+  // — a second listener here would render a duplicate ring overlay.
 
   // If the tab closes or reloads mid-call, still tell the peer we left
   useEffect(() => {
@@ -227,17 +207,20 @@ const Messages = () => {
     setCallConnectionState(null);
   };
 
-  // Initiate an outgoing call — call record + notification + WebRTC offer
-  const handleStartCall = async (callType = 'video') => {
-    const recipientId = getOtherParticipantId();
+  // Initiate an outgoing call — call record + notification + WebRTC offer.
+  // recipientOverride lets the "New Chat" picker call a contact directly,
+  // without a conversation having to be open.
+  const handleStartCall = async (callType = 'video', recipientOverride = null) => {
+    const recipient = recipientOverride || getOtherParticipant();
+    const recipientId = recipient?.id;
     if (!recipientId) {
       toast.error('No recipient available to call');
       return;
     }
 
     const callerId = myId;
-    const callerName = userProfile?.name || userProfile?.displayName || 'Client';
-    const recipientName = getOtherParticipantName();
+    const callerName = userProfile?.name || userProfile?.displayName || 'User';
+    const recipientName = recipient?.name || getOtherParticipantName();
 
     try {
       // 1. Call record + notification to the recipient
@@ -299,55 +282,6 @@ const Messages = () => {
     }
   };
 
-  // Accept an incoming call — answer + signaling listener
-  const handleAcceptCall = async () => {
-    if (!incomingCall) return;
-    try {
-      const userId = myId;
-      await callService.answerCall(incomingCall.callId, userId);
-
-      const svc = new WebRTCService();
-      await svc.initialize();
-      setupWebrtcCallbacks(svc);
-      await svc.answerCall(incomingCall.callId, incomingCall.callType);
-
-      signalingUnsubRef.current = svc.listenForSignaling(incomingCall.callId, async (msg) => {
-        try {
-          if (msg.type === 'offer') await svc.handleOffer(msg.data.offer, incomingCall.callType);
-          else if (msg.type === 'ice-candidate') await svc.handleIceCandidate(msg.data.candidate);
-          else if (msg.type === 'end') { toast.info('Call ended'); cleanupCall(); setActiveCall(null); }
-        } catch (e) { console.error('Signaling handler error:', e); }
-      });
-
-      setWebrtc(svc);
-      setActiveCall({
-        callId: incomingCall.callId,
-        participantId: incomingCall.callerId,
-        participantName: incomingCall.callerName || 'Caller',
-        callType: incomingCall.callType,
-      });
-      setIncomingCall(null);
-    } catch (error) {
-      console.error('Error accepting call:', error);
-      toast.error('Failed to accept call');
-      cleanupCall();
-    }
-  };
-
-  // Reject an incoming call
-  const handleRejectCall = async () => {
-    if (!incomingCall) return;
-    try {
-      const userId = myId;
-      await callService.rejectCall(incomingCall.callId, userId);
-      setIncomingCall(null);
-      toast.info('Call rejected');
-    } catch (error) {
-      console.error('Error rejecting call:', error);
-      setIncomingCall(null);
-    }
-  };
-
   // End the active call
   const handleEndCall = async () => {
     if (!activeCall) return;
@@ -368,54 +302,57 @@ const Messages = () => {
 
   // ─── New chat functionality ───
 
-  // Load assigned caregivers for the "New Chat" dialog
+  // Default contact source: the client's assigned staff (caregivers, nurses,
+  // doctors). Backend scopes results to the authenticated patient/client.
+  const defaultContactLoader = async () => {
+    const patientId = userProfile?.id || userProfile?.uid || user?.uid;
+    if (!patientId) return [];
+
+    const assignments = await assignmentAPI.getAssignmentsByClient();
+    const seen = new Set();
+    return (assignments || [])
+      .map(a => ({
+        id: a.caregiverId || a.caregiver_id,
+        name: a.caregiverName || a.caregiver_name || 'Staff Member',
+        role: a.assignedToRole || a.assigned_to_role || a.caregiverRole || a.role || 'caregiver',
+      }))
+      .filter(c => {
+        if (!c.id || c.id === patientId || seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      });
+  };
+
+  // Load contacts for the "New Chat" dialog
   const handleOpenNewChat = async () => {
     setShowNewChat(true);
-    if (assignedCaregivers.length > 0) return; // already loaded
+    if (chatContacts.length > 0) return; // already loaded
 
-    const patientId = userProfile?.id || userProfile?.uid || user?.uid;
-    if (!patientId) return;
-
-    setLoadingCaregivers(true);
+    setLoadingContacts(true);
     try {
-      // Backend scopes results to the authenticated patient/client.
-      // Assignments link any staff role (caregiver/nurse/doctor) via caregiver_id.
-      const assignments = await assignmentAPI.getAssignmentsByClient();
-      const seen = new Set();
-      const caregivers = (assignments || [])
-        .map(a => ({
-          id: a.caregiverId || a.caregiver_id,
-          name: a.caregiverName || a.caregiver_name || 'Staff Member',
-          role: a.assignedToRole || a.assigned_to_role || a.caregiverRole || a.role || 'caregiver',
-        }))
-        .filter(c => {
-          if (!c.id || c.id === patientId || seen.has(c.id)) return false;
-          seen.add(c.id);
-          return true;
-        });
-      setAssignedCaregivers(caregivers);
+      const loader = contactLoader || defaultContactLoader;
+      setChatContacts(await loader({ myId, userProfile, user }));
     } catch (err) {
-      console.error('Error loading caregivers:', err);
-      toast.error('Could not load your assigned caregivers');
+      console.error('Error loading contacts:', err);
+      toast.error('Could not load contacts');
     } finally {
-      setLoadingCaregivers(false);
+      setLoadingContacts(false);
     }
   };
 
-  // Start a new conversation with a caregiver
-  const handleStartNewChat = async (caregiver) => {
-    const clientId = userProfile?.id || userProfile?.uid || user?.uid;
-    if (!clientId || !caregiver?.id) return;
+  // Start a new conversation with a contact
+  const handleStartNewChat = async (contact) => {
+    if (!myId || !contact?.id) return;
 
     try {
-      const conversation = await getOrCreateConversation(clientId, caregiver.id, 'general');
+      const conversation = await getOrCreateConversation(myId, contact.id, 'general');
       // Add to conversations list and select it
       const newConv = {
         id: conversation.id,
-        participants: [clientId, caregiver.id],
+        participants: [myId, contact.id],
         participantDetails: [
-          { id: clientId, name: userProfile?.name || 'Me', role: 'client' },
-          { id: caregiver.id, name: caregiver.name, role: caregiver.role },
+          { id: myId, name: userProfile?.name || 'Me', role: userProfile?.userType || userProfile?.role || 'user' },
+          { id: contact.id, name: contact.name, role: contact.role },
         ],
         conversationType: 'general',
         lastMessage: '',
@@ -425,7 +362,7 @@ const Messages = () => {
       setFilteredConversations(prev => [newConv, ...prev]);
       handleSelectChat(newConv);
       setShowNewChat(false);
-      toast.success(`Chat started with ${caregiver.name}`);
+      toast.success(`Chat started with ${contact.name}`);
     } catch (err) {
       console.error('Error starting new chat:', err);
       toast.error('Failed to start conversation');
@@ -476,7 +413,7 @@ const Messages = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className={containerClassName}>
       {/* Conversations Sidebar — full-width on mobile until a chat is open */}
       <div className={`${selectedChat ? 'hidden md:flex' : 'flex'} w-full md:w-80 md:shrink-0 border-r border-gray-200 flex-col`}>
         {/* Header */}
@@ -665,23 +602,6 @@ const Messages = () => {
         )}
       </div>
 
-      {/* Incoming Call Interface */}
-      {incomingCall && (
-        <CallInterface
-          isOpen={!!incomingCall}
-          onClose={handleRejectCall}
-          callId={incomingCall.callId}
-          callType={incomingCall.callType}
-          participantInfo={{
-            id: incomingCall.callerId,
-            name: incomingCall.callerName || 'Caller',
-          }}
-          isIncoming={true}
-          onCallAccepted={handleAcceptCall}
-          onCallRejected={handleRejectCall}
-        />
-      )}
-
       {/* Active Call Interface */}
       {activeCall && (
         <CallInterface
@@ -706,7 +626,7 @@ const Messages = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Start New Chat</h2>
+              <h2 className="text-lg font-semibold text-gray-900">{newChatTitle}</h2>
               <button
                 onClick={() => setShowNewChat(false)}
                 className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
@@ -715,31 +635,48 @@ const Messages = () => {
               </button>
             </div>
             <div className="p-4 max-h-96 overflow-y-auto">
-              {loadingCaregivers ? (
-                <div className="text-center py-8 text-gray-500">Loading your caregivers...</div>
-              ) : assignedCaregivers.length === 0 ? (
+              {loadingContacts ? (
+                <div className="text-center py-8 text-gray-500">{contactsLoadingText}</div>
+              ) : chatContacts.length === 0 ? (
                 <div className="text-center py-8">
                   <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No assigned caregivers found.</p>
-                  <p className="text-sm text-gray-400 mt-1">Ask your institution to assign a caregiver to start chatting.</p>
+                  <p className="text-gray-500">{contactsEmptyTitle}</p>
+                  <p className="text-sm text-gray-400 mt-1">{contactsEmptyHint}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {assignedCaregivers.map((caregiver) => (
-                    <button
-                      key={caregiver.id}
-                      onClick={() => handleStartNewChat(caregiver)}
-                      className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 transition-colors text-left border border-gray-100"
+                  {chatContacts.map((contact) => (
+                    <div
+                      key={contact.id}
+                      className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 transition-colors border border-gray-100"
                     >
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{caregiver.name}</p>
-                        <p className="text-sm text-gray-500 capitalize">{String(caregiver.role).replace(/_/g, ' ')}</p>
-                      </div>
-                      <MessageCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    </button>
+                      <button
+                        onClick={() => handleStartNewChat(contact)}
+                        className="flex items-center space-x-3 flex-1 min-w-0 text-left"
+                      >
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{contact.name}</p>
+                          <p className="text-sm text-gray-500 capitalize">{String(contact.role || '').replace(/_/g, ' ')}</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => { setShowNewChat(false); handleStartCall('audio', contact); }}
+                        className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors flex-shrink-0"
+                        title="Voice Call"
+                      >
+                        <Phone className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => { setShowNewChat(false); handleStartCall('video', contact); }}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
+                        title="Video Call"
+                      >
+                        <Video className="h-5 w-5" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}

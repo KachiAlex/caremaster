@@ -56,12 +56,15 @@ import {
   TestTube,
   UserCog,
   Ban,
-  PanelLeftClose,
-  PanelLeftOpen,
   Search,
   Mic,
   PhoneOff,
-  Upload
+  Upload,
+  MoreVertical,
+  Paperclip,
+  Smile,
+  Send,
+  CheckCheck
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUserStatus } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -399,11 +402,9 @@ const InstitutionAdminDashboard = () => {
   const [isNarrowMessagingLayout, setIsNarrowMessagingLayout] = useState(false);
   const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
   const [showNewChatPicker, setShowNewChatPicker] = useState(false);
-  const [incomingCall, setIncomingCall] = useState(null);
 
   const { isMobile, isTablet } = useResponsive();
   const isMobileMessagingView = isMobile || isTablet || isNarrowMessagingLayout;
-  const isDesktopMessagingView = !isMobileMessagingView;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -491,6 +492,12 @@ const InstitutionAdminDashboard = () => {
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab) setActiveTab(tab);
+    // ?subTab=care-requests deep-links into the Clients sub-tab (used by
+    // the video-consultation-request admin notification).
+    const subTab = searchParams.get('subTab');
+    if (tab === 'clients' && ['active', 'archived', 'care-requests'].includes(subTab)) {
+      setClientSubTab(subTab);
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -2431,19 +2438,8 @@ const InstitutionAdminDashboard = () => {
     }
   }, [isInCall, remoteStream]);
 
-  // Listen for incoming calls
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const unsubscribe = callService.listenForIncomingCalls(user.uid, (callData) => {
-      console.log('📞 Incoming call:', callData);
-      setIncomingCall(callData);
-    });
-
-    return () => {
-      callService.stopListeningForCalls(user.uid);
-    };
-  }, [user?.uid]);
+  // Incoming calls are handled app-wide by GlobalCallHandler (mounted in App).
+  // A local listener here would render a duplicate ring overlay.
 
   // Load and subscribe to notifications
   useEffect(() => {
@@ -2486,8 +2482,9 @@ const InstitutionAdminDashboard = () => {
   };
 
   // Call functions - moved to component level to be accessible by CallInterface
-  const startVoiceCall = async () => {
-    if (!selectedConversation) {
+  const startVoiceCall = async (conversationOverride = null) => {
+    const callConversation = conversationOverride || selectedConversation;
+    if (!callConversation) {
       toast.error('Please select a conversation first');
       return;
     }
@@ -2504,18 +2501,18 @@ const InstitutionAdminDashboard = () => {
 
       // Find recipient from participants array
       let recipientId = null;
-      const participantDetails = Array.isArray(selectedConversation.participantDetails)
-        ? selectedConversation.participantDetails : [];
+      const participantDetails = Array.isArray(callConversation.participantDetails)
+        ? callConversation.participantDetails : [];
       const detailMatch = participantDetails.find(p => p && String(p.id) !== String(userId));
       if (detailMatch) recipientId = detailMatch.id;
-      if (!recipientId && selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
-        recipientId = selectedConversation.participants.find(p => p && String(p) !== String(userId));
+      if (!recipientId && callConversation.participants && Array.isArray(callConversation.participants)) {
+        recipientId = callConversation.participants.find(p => p && String(p) !== String(userId));
       }
-      if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
-        recipientId = selectedConversation.userId;
+      if (!recipientId && callConversation.userId && callConversation.userId !== userId) {
+        recipientId = callConversation.userId;
       }
-      if (!recipientId && selectedConversation.id && !String(selectedConversation.id).includes('_conv_') && selectedConversation.id !== userId) {
-        recipientId = selectedConversation.id;
+      if (!recipientId && callConversation.id && !String(callConversation.id).includes('_conv_') && callConversation.id !== userId) {
+        recipientId = callConversation.id;
       }
 
       if (!recipientId) {
@@ -2529,7 +2526,7 @@ const InstitutionAdminDashboard = () => {
         recipientId,
         callType: 'voice',
         callerName: userProfile?.name || 'Admin',
-        recipientName: selectedConversation.name || 'User'
+        recipientName: callConversation.name || 'User'
       });
 
       if (!result || !result.callId) {
@@ -2581,21 +2578,22 @@ const InstitutionAdminDashboard = () => {
       setActiveCall({
         callId: result.callId,
         participantId: recipientId,
-        participantName: selectedConversation.name || 'User',
+        participantName: callConversation.name || 'User',
         callType: 'voice'
       });
       setIsInCall(true);
       setElapsedSeconds(0);
       setCallStartAt(null);
-      toast.success(`Voice call initiated with ${selectedConversation.name || 'User'}`);
+      toast.success(`Voice call initiated with ${callConversation.name || 'User'}`);
     } catch (error) {
       console.error('❌ Error starting voice call:', error);
       toast.error(error.message || 'Failed to start voice call. Please check microphone permissions.');
     }
   };
 
-  const startVideoCall = async () => {
-    if (!selectedConversation) {
+  const startVideoCall = async (conversationOverride = null) => {
+    const callConversation = conversationOverride || selectedConversation;
+    if (!callConversation) {
       toast.error('Please select a conversation first');
       return;
     }
@@ -2610,21 +2608,21 @@ const InstitutionAdminDashboard = () => {
 
       // Find recipient ID
       let recipientId = null;
-      const participantDetails = Array.isArray(selectedConversation.participantDetails)
-        ? selectedConversation.participantDetails : [];
+      const participantDetails = Array.isArray(callConversation.participantDetails)
+        ? callConversation.participantDetails : [];
       const detailMatch = participantDetails.find(p => p && String(p.id) !== String(userId));
       if (detailMatch) recipientId = detailMatch.id;
-      if (!recipientId && selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
-        recipientId = selectedConversation.participants.find(p => p && String(p) !== String(userId));
+      if (!recipientId && callConversation.participants && Array.isArray(callConversation.participants)) {
+        recipientId = callConversation.participants.find(p => p && String(p) !== String(userId));
       }
-      if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
-        recipientId = selectedConversation.userId;
+      if (!recipientId && callConversation.userId && callConversation.userId !== userId) {
+        recipientId = callConversation.userId;
       }
-      if (!recipientId && selectedConversation.id && !String(selectedConversation.id).includes('_conv_') && selectedConversation.id !== userId) {
-        recipientId = selectedConversation.id;
+      if (!recipientId && callConversation.id && !String(callConversation.id).includes('_conv_') && callConversation.id !== userId) {
+        recipientId = callConversation.id;
       }
-      if (!recipientId && selectedConversation.user && selectedConversation.user !== userId) {
-        recipientId = selectedConversation.user;
+      if (!recipientId && callConversation.user && callConversation.user !== userId) {
+        recipientId = callConversation.user;
       }
 
       if (!recipientId) {
@@ -2638,7 +2636,7 @@ const InstitutionAdminDashboard = () => {
         recipientId,
         callType: 'video',
         callerName: userProfile?.name || 'Admin',
-        recipientName: selectedConversation.name || 'User'
+        recipientName: callConversation.name || 'User'
       });
 
       if (!result || !result.callId) {
@@ -2690,13 +2688,13 @@ const InstitutionAdminDashboard = () => {
       setActiveCall({
         callId: result.callId,
         participantId: recipientId,
-        participantName: selectedConversation.name || 'User',
+        participantName: callConversation.name || 'User',
         callType: 'video'
       });
       setIsInCall(true);
       setElapsedSeconds(0);
       setCallStartAt(null);
-      toast.success(`Video call initiated with ${selectedConversation.name || 'User'}`);
+      toast.success(`Video call initiated with ${callConversation.name || 'User'}`);
     } catch (error) {
       console.error('❌ Error starting video call:', error);
       toast.error(error.message || 'Failed to start video call. Please check camera and microphone permissions.');
@@ -2802,7 +2800,7 @@ const renderMessagesTab = () => {
         });
 
         const optimisticMessage = {
-          id: Date.now(),
+          id: `local-${Date.now()}`,
           text: newMessage,
           senderId: senderId,
           senderName: userProfile?.name || 'You',
@@ -2820,19 +2818,6 @@ const renderMessagesTab = () => {
       }
     };
 
-    const conversationBadge = (conversation) => {
-      const type = (conversation.type || 'user').toLowerCase();
-      const styles = {
-        caregiver: 'bg-green-100 text-green-800',
-        doctor: 'bg-blue-100 text-blue-800',
-        pharmacist: 'bg-indigo-100 text-indigo-800',
-        nurse: 'bg-purple-100 text-purple-800',
-        admin: 'bg-red-100 text-red-800',
-        client: 'bg-orange-100 text-orange-800'
-      };
-      return styles[type] || 'bg-gray-100 text-gray-700';
-    };
-
     const formattedConversations = (conversations || [])
       .filter((conversation) => {
         if (!messageSearchTerm) return true;
@@ -2845,7 +2830,7 @@ const renderMessagesTab = () => {
       displayType: (conversation.type || 'user').replace(/^\w/, (c) => c.toUpperCase())
     }));
 
-    const handleStartNewChat = async (targetUser) => {
+    const handleStartNewChat = async (targetUser, callType = null) => {
       try {
         const userId = user?.uid || userProfile?.id;
         if (!userId) return;
@@ -2867,8 +2852,15 @@ const renderMessagesTab = () => {
         setSelectedConversation(newConv);
         setShowNewChatPicker(false);
         setMessages([]);
-        if (isMobileMessagingView) setShowMobileChatPane(true);
         loadConversations();
+
+        // When invoked from a call button, ring the contact straight away —
+        // pass the conv explicitly since selectedConversation is async state.
+        if (callType === 'voice') {
+          startVoiceCall(newConv);
+        } else if (callType === 'video') {
+          startVideoCall(newConv);
+        }
       } catch (error) {
         console.error('Error starting new chat:', error);
         toast.error('Failed to start new conversation');
@@ -2884,12 +2876,6 @@ const renderMessagesTab = () => {
 
     const handleConversationSelect = (conversation) => {
       setSelectedConversation(conversation);
-      if (!isMobileMessagingView) {
-        setIsConversationListCollapsed(false);
-      }
-      if (isMobileMessagingView) {
-        setShowMobileChatPane(true);
-      }
 
       const convId = conversation.conversationId || conversation.id;
       if (convId) {
@@ -2899,191 +2885,147 @@ const renderMessagesTab = () => {
       }
     };
 
-    const toggleConversationList = () => {
-      if (isMobileMessagingView) {
-        setShowMobileChatPane(false);
-      } else {
-        setIsConversationListCollapsed((prev) => !prev);
-      }
-    };
+    const isMine = (message) =>
+      (message.senderId || message.sender) === (user?.uid || user?.id || userProfile?.uid || userProfile?.id);
 
-    const conversationListClasses = [
-      'flex flex-col transition-all duration-200',
-      isMobileMessagingView
-        ? showMobileChatPane
-          ? 'hidden lg:flex lg:w-80 lg:border-r lg:border-gray-200'
-          : 'flex w-full border-r border-gray-200 lg:w-80'
-        : isConversationListCollapsed
-          ? 'hidden lg:flex lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none'
-          : 'hidden lg:flex lg:w-80 lg:border-r lg:border-gray-200'
-    ].join(' ');
-
-    const chatPaneClasses = [
-      'flex-1 flex flex-col transition-all duration-200',
-      isMobileMessagingView
-        ? showMobileChatPane
-          ? 'flex w-full'
-          : 'hidden lg:flex'
-        : isConversationListCollapsed
-          ? 'flex lg:pl-0'
-          : 'flex'
-    ].join(' ');
+    const getStatusColor = (status) => (status === 'online' ? 'bg-green-500' : 'bg-gray-400');
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[calc(100vh-250px)]">
-        <div className="flex h-full">
-          {/* Conversation List */}
-          <div className={conversationListClasses}>
+      <div className="h-[calc(100vh-250px)] flex bg-white rounded-lg shadow-sm border border-gray-200">
+          {/* Conversation List — full-width on mobile until a chat is open */}
+          <div className={`${selectedConversation ? 'hidden lg:flex' : 'flex'} w-full lg:w-80 lg:shrink-0 border-r border-gray-200 flex-col`}>
             <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
-                  <p className="text-sm text-gray-500 mt-1">{formattedConversations.length} conversations</p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <MessageSquare className="h-6 w-6 text-gray-700 mr-3" />
+                  <h2 className="text-xl font-bold text-gray-900">Messages</h2>
                 </div>
                 <button
                   onClick={() => setShowNewChatPicker(true)}
-                  className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                  title="Start new chat"
+                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  title="Start a new conversation"
                 >
                   <Plus className="h-5 w-5" />
                 </button>
               </div>
-              {conversations.length > 0 && (
-                <div className="mt-3 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={messageSearchTerm}
-                    onChange={(e) => setMessageSearchTerm(e.target.value)}
-                    placeholder="Search conversations..."
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={messageSearchTerm}
+                  onChange={(e) => setMessageSearchTerm(e.target.value)}
+                  placeholder="Search conversations..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
               {formattedConversations.length === 0 ? (
-                <div className="p-4 sm:p-8 text-center text-gray-500">
+                <div className="p-4 text-center text-gray-500">
                   <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                   <p>No conversations yet</p>
                 </div>
               ) : (
-                formattedConversations.map((conversation) => {
-                  const displayName = conversation.displayName || 'Unknown User';
-                  const initial = displayName.charAt(0).toUpperCase();
-
-                  return (
-                    <button
-                      key={conversation.id}
-                      type="button"
-                      onClick={() => handleConversationSelect(conversation)}
-                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
-                        selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                          {initial}
+                formattedConversations.map((conversation) => (
+                  <div
+                    key={conversation.id}
+                    onClick={() => handleConversationSelect(conversation)}
+                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      selectedConversation?.id === conversation.id ? 'bg-blue-50 border-blue-200' : ''
+                    }`}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="relative">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                          <User className="h-6 w-6 text-blue-600" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-900 truncate">{displayName}</h3>
-                            {conversation.unread > 0 && (
-                              <span className="bg-blue-600 text-white text-xs rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
-                                {conversation.unread}
-                              </span>
-                            )}
-                          </div>
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-xs font-medium ${conversationBadge(
-                              conversation
-                            )}`}
-                          >
-                            {conversation.displayType}
+                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${getStatusColor(conversation.status)}`}></div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-gray-900 truncate">{conversation.displayName || 'Unknown User'}</h3>
+                          <span className="text-xs text-gray-500">
+                            {conversation.timestamp ? new Date(conversation.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}
                           </span>
-                          <p className="text-sm text-gray-500 truncate mt-1">{conversation.lastMessage || 'Start the conversation'}</p>
-                          {conversation.timestamp && (
-                            <span className="text-xs text-gray-400">
-                              {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <p className="text-xs text-gray-500 mb-1 capitalize">{conversation.displayType}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-gray-600 truncate">{conversation.lastMessage || 'Start the conversation'}</p>
+                          {conversation.unread > 0 && (
+                            <span className="bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 ml-2">
+                              {conversation.unread}
                             </span>
                           )}
                         </div>
                       </div>
-                    </button>
-                  );
-                })
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>
 
-          {/* Chat Pane */}
-          <div className={chatPaneClasses}>
+          {/* Chat Pane — full-width on mobile only when a chat is selected */}
+          <div className={`${selectedConversation ? 'flex' : 'hidden lg:flex'} flex-1 flex-col`}>
             {selectedConversation ? (
               <>
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    {isDesktopMessagingView && (
+                <div className="p-4 border-b border-gray-200 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
                       <button
-                        onClick={toggleConversationList}
-                        className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
-                        aria-label={isConversationListCollapsed ? 'Show conversation list' : 'Hide conversation list'}
-                      >
-                        {isConversationListCollapsed ? (
-                          <PanelLeftOpen className="h-5 w-5" />
-                        ) : (
-                          <PanelLeftClose className="h-5 w-5" />
-                        )}
-                      </button>
-                    )}
-                    {isMobileMessagingView && (
-                      <button
-                        onClick={() => setShowMobileChatPane(false)}
-                        className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
-                        aria-label="Back to conversations"
+                        onClick={() => setSelectedConversation(null)}
+                        className="lg:hidden p-2 -ml-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+                        title="Back to conversations"
                       >
                         <ArrowLeft className="h-5 w-5" />
                       </button>
-                    )}
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
-                      {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                      <div className="relative">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <User className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(selectedConversation.status)}`}></div>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
+                        <p className="text-sm text-gray-500 capitalize">
+                          {selectedConversation.type
+                            ? selectedConversation.type.replace(/_/g, ' ')
+                            : 'User'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
-                      <p className="text-xs text-gray-500">
-                        {selectedConversation.type
-                          ? selectedConversation.type.replace(/^\w/, (c) => c.toUpperCase())
-                          : 'User'}
-                      </p>
+                    <div className="flex items-center space-x-2">
+                      {!isInCall ? (
+                        <>
+                          <button
+                            onClick={startVoiceCall}
+                            className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Voice Call"
+                          >
+                            <Phone className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={startVideoCall}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Video Call"
+                          >
+                            <Camera className="h-5 w-5" />
+                          </button>
+                          <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                            <MoreVertical className="h-5 w-5" />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={handleEndCall}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                        >
+                          <Phone className="h-4 w-4" />
+                          End Call
+                        </button>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!isInCall ? (
-                      <>
-                        <button
-                          onClick={startVoiceCall}
-                          className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                          title="Start Voice Call"
-                        >
-                          <Phone className="h-5 w-5 text-gray-600" />
-                        </button>
-                        <button
-                          onClick={startVideoCall}
-                          className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                          title="Start Video Call"
-                        >
-                          <Camera className="h-5 w-5 text-gray-600" />
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={handleEndCall}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                      >
-                        <Phone className="h-4 w-4" />
-                        End Call
-                      </button>
-                    )}
                   </div>
                 </div>
 
@@ -3191,7 +3133,7 @@ const renderMessagesTab = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
                       {messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                           <div className="text-center text-gray-400">
@@ -3201,28 +3143,39 @@ const renderMessagesTab = () => {
                         </div>
                       ) : (
                         messages.map((message) => {
-                          const isMine = (message.senderId || message.sender) === (user?.uid || user?.id || userProfile?.uid || userProfile?.id);
                           const timeStamp = message.createdAt || message.timestamp;
+                          const mine = isMine(message);
 
                           return (
                             <div
                               key={message.id || `${message.senderId}-${message.createdAt}`}
-                              className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                              className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
                             >
                               <div
                                 className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                  isMine ? 'bg-blue-600 text-white' : 'bg-white text-gray-900 border border-gray-200'
+                                  mine ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
                                 }`}
                               >
-                                {!isMine && message.senderName && (
-                                  <p className="text-xs font-semibold mb-1">{message.senderName}</p>
+                                {!mine && message.senderName && (
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">{message.senderName}</p>
                                 )}
                                 <p className="text-sm">{message.text || message.content}</p>
-                                <p className={`text-xs mt-1 ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
-                                  {timeStamp
-                                    ? new Date(timeStamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                    : ''}
-                                </p>
+                                <div className={`flex items-center justify-between mt-1 ${mine ? 'text-blue-100' : 'text-gray-500'}`}>
+                                  <span className="text-xs">
+                                    {timeStamp
+                                      ? new Date(timeStamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                      : ''}
+                                  </span>
+                                  {mine && (
+                                    String(message.id || '').startsWith('local-') ? (
+                                      <Clock className="h-3.5 w-3.5 text-blue-200 ml-2" aria-label="Sending" />
+                                    ) : message.read ? (
+                                      <CheckCheck className="h-4 w-4 text-blue-300 ml-2" aria-label="Read" />
+                                    ) : (
+                                      <CheckCheck className="h-4 w-4 text-blue-200 opacity-60 ml-2" aria-label="Delivered" />
+                                    )
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
@@ -3232,157 +3185,103 @@ const renderMessagesTab = () => {
                     </div>
 
                     <div className="p-4 border-t border-gray-200 bg-white">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                          placeholder="Type a message..."
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button
-                          onClick={handleSendMessage}
-                          disabled={!newMessage.trim()}
-                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                        >
-                          Send
+                      <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center space-x-2">
+                        <button type="button" className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                          <Paperclip className="h-5 w-5" />
                         </button>
-                      </div>
+                        <div className="flex-1 relative">
+                          <input
+                            type="text"
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="Type a message..."
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <button type="button" className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600">
+                            <Smile className="h-5 w-5" />
+                          </button>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={!newMessage.trim()}
+                          className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <Send className="h-5 w-5" />
+                        </button>
+                      </form>
                     </div>
                   </>
                 )}
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center bg-gray-50">
-                <div className="text-center text-gray-400 px-6">
-                  <MessageSquare className="h-16 w-16 mx-auto mb-4" />
-                  <p className="text-lg font-medium">Select a conversation to start messaging</p>
-                  <p className="text-sm mt-2">Or start a voice/video call</p>
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <MessageSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Select a conversation</h3>
+                  <p className="text-gray-500">Choose a conversation from the sidebar to start messaging</p>
                 </div>
               </div>
             )}
           </div>
-        </div>
 
         {/* New Chat Picker Modal */}
         {showNewChatPicker && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowNewChatPicker(false)}>
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">Start New Chat</h3>
-                <button onClick={() => setShowNewChatPicker(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setShowNewChatPicker(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-2">
+              <div className="p-4 max-h-96 overflow-y-auto">
                 {availableUsers.length === 0 ? (
-                  <div className="p-4 sm:p-8 text-center text-gray-500">
-                    <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                    <p>No users available to chat with</p>
+                  <div className="text-center py-8">
+                    <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">No users available to chat with</p>
                   </div>
                 ) : (
-                  availableUsers.map((u) => (
-                    <button
-                      key={u.id}
-                      onClick={() => handleStartNewChat(u)}
-                      className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-3"
-                    >
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
-                        {(u.name || 'U').charAt(0).toUpperCase()}
+                  <div className="space-y-2">
+                    {availableUsers.map((u) => (
+                      <div
+                        key={u.id}
+                        className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 transition-colors border border-gray-100"
+                      >
+                        <button
+                          onClick={() => handleStartNewChat(u)}
+                          className="flex items-center space-x-3 flex-1 min-w-0 text-left"
+                        >
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{u.name || 'Unknown'}</p>
+                            <p className="text-sm text-gray-500 capitalize">{String(u.userType || '').replace(/_/g, ' ')}</p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => handleStartNewChat(u, 'voice')}
+                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors flex-shrink-0"
+                          title="Voice Call"
+                        >
+                          <Phone className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleStartNewChat(u, 'video')}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
+                          title="Video Call"
+                        >
+                          <Camera className="h-5 w-5" />
+                        </button>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{u.name || 'Unknown'}</p>
-                        <p className="text-xs text-gray-500 capitalize">{u.userType}</p>
-                      </div>
-                    </button>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Incoming Call Notification */}
-        {incomingCall && !isInCall && (
-          <div className="fixed top-4 right-2 left-2 sm:left-auto sm:right-4 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 w-full sm:w-auto sm:min-w-[300px] max-w-[380px] mx-auto sm:mx-0 animate-slide-in">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold animate-pulse">
-                {(incomingCall.callerName || 'U').charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">Incoming {incomingCall.callType === 'video' ? 'Video' : 'Voice'} Call</p>
-                <p className="text-sm text-gray-500">{incomingCall.callerName || 'Unknown'}</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={async () => {
-                  try {
-                    const myId = userProfile?.id || user?.id || user?.uid;
-                    await callService.answerCall(incomingCall.callId, myId);
-                    setIncomingCall(null);
-                    // Initialize WebRTC for answering
-                    const service = new WebRTCService();
-                    await service.initialize();
-                    webrtcRef.current = service;
-                    // Register callbacks BEFORE answerCall acquires media
-                    service.setCallbacks({
-                      onLocalStream: (stream) => setLocalStream(stream),
-                      onRemoteStream: (stream) => {
-                        setRemoteStream(stream);
-                        if (timerRef.current) clearInterval(timerRef.current);
-                        const start = callStartAt || new Date();
-                        if (!callStartAt) setCallStartAt(start);
-                        timerRef.current = setInterval(() => {
-                          setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
-                        }, 1000);
-                      },
-                      onCallStateChange: (state) => setCallConnectionState(state),
-                    });
-                    await service.answerCall(incomingCall.callId, incomingCall.callType || 'video');
-                    setCallType(incomingCall.callType || 'video');
-                    setActiveCall({
-                      callId: incomingCall.callId,
-                      participantId: incomingCall.callerId,
-                      participantName: incomingCall.callerName || 'User',
-                      callType: incomingCall.callType || 'video'
-                    });
-                    setIsInCall(true);
-                    setElapsedSeconds(0);
-                    setCallStartAt(null);
-
-                    // Listen for signaling
-                    service.listenForSignaling(incomingCall.callId, async (message) => {
-                      if (message.type === 'offer') {
-                        await service.handleOffer(message.data?.offer || message.offer, incomingCall.callType || 'video');
-                      } else if (message.type === 'ice-candidate') {
-                        await service.handleIceCandidate(message.data?.candidate || message.candidate);
-                      }
-                    });
-                  } catch (error) {
-                    console.error('Error answering call:', error);
-                    toast.error('Failed to answer call');
-                  }
-                }}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-              >
-                Answer
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await callService.rejectCall(incomingCall.callId, userProfile?.id || user?.id || user?.uid);
-                  } catch (e) { console.error(e); }
-                  setIncomingCall(null);
-                }}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     );
   };

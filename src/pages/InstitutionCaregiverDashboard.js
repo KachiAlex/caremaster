@@ -87,7 +87,6 @@ import ConsultationsTabContent from '../components/ConsultationsTabContent';
 import DiagnosticsTab from '../components/DiagnosticsTab';
 import { getClientDiagnostics } from '../api/diagnosticsAPI';
 import CallService from '../services/callService';
-import CallInterface from '../components/CallInterface';
 import PortalSwitcher from '../components/PortalSwitcher';
 import WebRTCService from '../services/webrtcService';
 import AdlLogger from '../components/AdlLogger';
@@ -294,8 +293,7 @@ const InstitutionCaregiverDashboard = () => {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
   // Call-related states
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [activeCall, setActiveCall] = useState(null);
+
   const [callConnectionState, setCallConnectionState] = useState('connecting'); // Track WebRTC connection state
   const [callPhase, setCallPhase] = useState('idle'); // 'idle' | 'calling' | 'connecting' | 'connected' | 'ended'
   const [callRecipient, setCallRecipient] = useState(null); // who we're calling
@@ -1260,126 +1258,8 @@ const InstitutionCaregiverDashboard = () => {
     };
   }, [selectedClient?.id]);
 
-  // Set up incoming call listener
-  useEffect(() => {
-    if (!userProfile || (!userProfile.id && !userProfile.uid)) {
-      return;
-    }
-    
-    const userId = userProfile.id || userProfile.uid || user?.uid;
-
-    const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {
-      if (callNotification.status === 'incoming') {
-        setIncomingCall({
-          callId: callNotification.callId,
-          callerId: callNotification.callerId,
-          callType: callNotification.callType,
-          timestamp: callNotification.timestamp
-        });
-        toast.info(`Incoming ${callNotification.callType} call...`);
-      }
-    });
-    
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [userProfile, user, callService]);
-
-  // Handle incoming call acceptance
-  const handleAcceptCall = async () => {
-    if (!incomingCall) return;
-
-    try {
-      const userId = userProfile.id || userProfile.uid || user?.uid;
-      await callService.answerCall(incomingCall.callId, userId);
-      // Initialize WebRTC and answer
-      await webrtc.initialize();
-      await webrtc.answerCall(incomingCall.callId, incomingCall.callType);
-      // Listen for signaling for this call
-      const unsubscribeSignaling = webrtc.listenForSignaling(incomingCall.callId, async (msg) => {
-        if (msg.type === 'offer') {
-          await webrtc.handleOffer(msg.data.offer, incomingCall.callType);
-        } else if (msg.type === 'ice-candidate') {
-          await webrtc.handleIceCandidate(msg.data.candidate);
-        }
-      });
-      // Store unsubscribe for cleanup
-      callSignalingUnsubRef.current = unsubscribeSignaling;
-
-      setActiveCall({
-        callId: incomingCall.callId,
-        participantId: incomingCall.callerId,
-        participantName: 'Admin',
-        callType: incomingCall.callType
-      });
-      setCallType(incomingCall.callType);
-      setCallPhase('connecting');
-      setIsInCall(true);
-      setIncomingCall(null);
-      toast.success('Call accepted');
-    } catch (error) {
-      console.error('Error accepting call:', error);
-      toast.error('Failed to accept call');
-    }
-  };
-
-  // Handle incoming call rejection
-  const handleRejectCall = async () => {
-    if (!incomingCall) return;
-    
-    try {
-      const userId = userProfile.id || userProfile.uid || user?.uid;
-      await callService.rejectCall(incomingCall.callId, userId);
-      setIncomingCall(null);
-      toast.info('Call rejected');
-    } catch (error) {
-      console.error('Error rejecting call:', error);
-      toast.error('Failed to reject call');
-    }
-  };
-
-  // Handle active call end (incoming call flow)
-  const handleEndCall = async () => {
-    if (!activeCall) return;
-
-    try {
-      const duration = elapsedSeconds || 0;
-      await callService.endCall(activeCall.callId, duration);
-    } catch (error) {
-      console.error('Error ending call:', error);
-    }
-    // Clean up signaling + notification records
-    callService.cleanupSignalingRecords(activeCall.callId).catch(() => {});
-    callService.cleanupCallNotifications(activeCall.callId).catch(() => {});
-    setActiveCall(null);
-    // Full cleanup
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-      setLocalStream(null);
-    }
-    if (remoteStream) {
-      remoteStream.getTracks().forEach(track => track.stop());
-      setRemoteStream(null);
-    }
-    if (callSignalingUnsubRef.current) {
-      callSignalingUnsubRef.current();
-      callSignalingUnsubRef.current = null;
-    }
-    webrtc.endCall().catch(err => console.error('WebRTC endCall error:', err));
-    setIsInCall(false);
-    setCallType(null);
-    setCallPhase('idle');
-    callPhaseRef.current = 'idle';
-    setCallConnectionState('connecting');
-    setCurrentCallId(null);
-    setCallStartAt(null);
-    setElapsedSeconds(0);
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    toast.info('Call ended');
-  };
+  // Incoming calls are handled app-wide by GlobalCallHandler (mounted in App).
+  // This dashboard keeps its own outgoing-call flow (isInCall/callType/webrtc).
 
   const handleNewConsultation = () => {
     if (!selectedClient) {
@@ -6855,46 +6735,6 @@ const InstitutionCaregiverDashboard = () => {
         relatedCareLogs={careLogs || []}
       />
       
-      {/* Incoming Call Interface */}
-      {incomingCall && (
-        <CallInterface
-          isOpen={!!incomingCall}
-          onClose={handleRejectCall}
-          callType={incomingCall.callType}
-          participantInfo={{
-            id: incomingCall.callerId,
-            name: 'Admin',
-            role: 'admin'
-          }}
-          isIncoming={true}
-          onCallAccepted={handleAcceptCall}
-          onCallRejected={handleRejectCall}
-          onOpenDeviceSettings={() => setShowDeviceSettings(true)}
-          externalWebrtcService={webrtc}
-          externalCallState={callConnectionState}
-        />
-      )}
-
-      {/* Active Call Interface */}
-      {activeCall && (
-        <CallInterface
-          isOpen={!!activeCall}
-          onClose={handleEndCall}
-          callType={activeCall.callType}
-          participantInfo={{
-            id: activeCall.participantId,
-            name: activeCall.participantName,
-            role: 'admin'
-          }}
-          isIncoming={false}
-          onOpenDeviceSettings={() => setShowDeviceSettings(true)}
-          externalWebrtcService={webrtc}
-          externalCallState={callConnectionState}
-          localStream={localStream}
-          remoteStream={remoteStream}
-        />
-      )}
-
       {/* Profile Settings Modal */}
       {showProfileSettings && (
         <UserProfileSettings

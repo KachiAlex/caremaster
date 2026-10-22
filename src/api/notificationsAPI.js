@@ -93,6 +93,8 @@ export const notificationsAPI = {
 
       const notification = {
         ...notificationFields,
+        // Persist the key so the dedup check above actually matches on retry
+        ...(deduplicationKey ? { deduplicationKey } : {}),
         read: false,
         createdAt: serverTimestamp(),
         timestamp: new Date().toISOString()

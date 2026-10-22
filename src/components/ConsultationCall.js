@@ -25,6 +25,7 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [duration, setDuration] = useState(0);
+  const [networkStats, setNetworkStats] = useState({ rtt: 0, packetLoss: 0, quality: 'good' });
   const [peerName] = useState(isDoctor
     ? (appointment.clientName || 'Client')
     : (appointment.doctorName || 'Doctor'));
@@ -112,6 +113,9 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
             setPhase('ended');
           }
         },
+        onStatsUpdate: (stats) => {
+          setNetworkStats(stats);
+        },
       });
 
       // Media first so the offer/answer carries tracks
@@ -198,9 +202,26 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
           </div>
           <div>
             <h3 className="text-white font-semibold">{peerName}</h3>
-            <p className="text-gray-400 text-sm capitalize">
-              {phase === 'connected' ? `Connected · ${fmt(duration)}` : phase === 'waiting' ? 'Waiting for the other party…' : 'Connecting…'}
-            </p>
+            <div className="flex items-center space-x-2">
+              <p className="text-gray-400 text-sm capitalize">
+                {phase === 'connected' ? `Connected · ${fmt(duration)}` : phase === 'waiting' ? 'Waiting for the other party…' : 'Connecting…'}
+              </p>
+              {phase === 'connected' && (
+                <div className="flex items-center space-x-1">
+                  <div className={`w-2 h-2 rounded-full ${
+                    networkStats.quality === 'good' ? 'bg-green-500' :
+                    networkStats.quality === 'fair' ? 'bg-yellow-500' : 'bg-red-500'
+                  }`} />
+                  <span className="text-xs text-gray-400">
+                    {networkStats.quality === 'good' ? 'Good' :
+                     networkStats.quality === 'fair' ? 'Fair' : 'Poor'}
+                  </span>
+                  {networkStats.rtt > 0 && (
+                    <span className="text-xs text-gray-500">{Math.round(networkStats.rtt)}ms</span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <button
@@ -228,6 +249,14 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
             <div className="text-center text-white">
               <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-blue-400" />
               <p className="text-lg">{phase === 'waiting' ? `Waiting for ${peerName} to join…` : 'Connecting…'}</p>
+              {phase === 'waiting' && (
+                <button
+                  onClick={hangUp}
+                  className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors"
+                >
+                  Cancel Waiting
+                </button>
+              )}
             </div>
           </div>
         )}

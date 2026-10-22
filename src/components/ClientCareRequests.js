@@ -21,7 +21,6 @@ import { toast } from 'react-toastify';
 import telemedicineAPI from '../api/telemedicineAPI';
 import { getAllAppointments, updateAppointment } from '../api/appointmentsAPI';
 import { getAllUsers } from '../api/usersAPI';
-import { notifyClient, notifyCaregiver, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../services/notificationService';
 
 const ClientCareRequests = ({ institutionId }) => {
   const [requests, setRequests] = useState([]);
@@ -253,41 +252,8 @@ const ClientCareRequests = ({ institutionId }) => {
         });
       }
 
-      // Notify the assigned doctor/caregiver
-      try {
-        await notifyCaregiver(scheduleForm.assigneeId, {
-          type: isVideo ? NOTIFICATION_TYPES.CONSULTATION : NOTIFICATION_TYPES.TASK,
-          title: isVideo ? 'Video Consultation Assigned' : 'Care Visit Assigned',
-          message: `You have been assigned a ${isVideo ? 'video consultation' : 'care visit'} with ${scheduling.clientName || 'a client'} on ${scheduledAt.toLocaleDateString()} at ${scheduledAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
-          priority: NOTIFICATION_PRIORITIES.MEDIUM,
-          navigateTo: isVideo ? '/telemedicine' : '/caregiver/tasks',
-          metadata: {
-            clientId: scheduling.clientId,
-            clientName: scheduling.clientName,
-            scheduledAt: scheduledAt.toISOString(),
-          },
-        });
-      } catch (notifErr) {
-        console.warn('Failed to notify assignee:', notifErr);
-      }
-
-      // Notify the client that their request has been scheduled
-      try {
-        await notifyClient(scheduling.clientId, {
-          type: isVideo ? NOTIFICATION_TYPES.CONSULTATION : NOTIFICATION_TYPES.APPOINTMENT,
-          title: isVideo ? 'Video Consultation Scheduled' : 'Care Visit Scheduled',
-          message: `Your ${isVideo ? 'video consultation' : 'care visit'} has been scheduled with ${scheduleForm.assigneeName} on ${scheduledAt.toLocaleDateString()} at ${scheduledAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
-          priority: NOTIFICATION_PRIORITIES.MEDIUM,
-          navigateTo: isVideo ? '/telemedicine' : '/appointments',
-          metadata: {
-            assigneeName: scheduleForm.assigneeName,
-            scheduledAt: scheduledAt.toISOString(),
-          },
-        });
-      } catch (notifErr) {
-        console.warn('Failed to notify client:', notifErr);
-      }
-
+      // The backend notifies the assignee and the client via
+      // notificationDispatcher when the row transitions to 'scheduled'.
       toast.success('Request scheduled successfully');
       setScheduling(null);
       loadRequests();

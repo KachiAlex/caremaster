@@ -477,9 +477,15 @@ async function scopeQuery(query, user, tableName) {
       if (hasInstitutionId && user.institution_id) {
         query.where(`${tableName}.institution_id`, user.institution_id);
       } else {
-        // Fallback: own record + assigned patients
+        // Fallback: own record + assigned patients + platform/institution
+        // admins, so caregivers without an institution_id can still reach an
+        // admin to message.
         const allowedIds = [user.id, ...patientIds];
-        query.whereIn(`${tableName}.id`, allowedIds);
+        const adminTypes = [...new Set([...ADMIN_ROLES, ...SUPER_ADMIN_ROLES, 'institution_admin', 'institutionAdmin'])];
+        query.where(function() {
+          this.whereIn(`${tableName}.id`, allowedIds)
+            .orWhereIn(`${tableName}.user_type`, adminTypes);
+        });
       }
       return query;
     }
@@ -865,6 +871,11 @@ async function canSignalChannel(user, channelName) {
 
   if (channelName.startsWith('call_')) {
     // calls.call_id already includes the call_ prefix
+    // Validate format: call_<timestamp>_<random> or call_<uuid>
+    const callIdSuffix = channelName.slice('call_'.length);
+    if (!callIdSuffix || callIdSuffix.length < 10) {
+      return false; // Reject malformed channel names
+    }
     const call = await db('calls').where({ call_id: channelName }).first();
     if (!call) return false;
     if (isAdmin) return call.institution_id === user.institution_id;

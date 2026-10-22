@@ -191,12 +191,21 @@ class TelemedicineAPI {
     try {
       const call = {
         appointmentId,
+        // Canonical channel — both parties signal on consult_<appointmentId>.
+        // Callers may pass channelName for compatibility, but we always
+        // override with the deterministic name the backend validates.
+        channelName: `consult_${appointmentId}`,
         ...callData,
         startTime: serverTimestamp(),
         status: 'active',
         createdAt: serverTimestamp()
       };
-      
+
+      // Strip callType/call_type — telemedicine_calls has no such column
+      // (the 'type' field lives on telemedicine_appointments).
+      delete call.callType;
+      delete call.call_type;
+
       const docRef = await addDoc(collection(db, COLLECTIONS.CALLS), call);
       
       // Update appointment status
@@ -266,6 +275,8 @@ class TelemedicineAPI {
   }
 
   // ===== RECORDINGS =====
+  // NOTE: Recording functionality requires backend file upload endpoints and storage configuration.
+  // These methods are placeholders - implement file upload/storage to enable recording.
   
   // Save recording information
   async saveRecording(callId, recordingData) {
@@ -275,9 +286,9 @@ class TelemedicineAPI {
         ...recordingData,
         createdAt: serverTimestamp()
       };
-      
+
       const docRef = await addDoc(collection(db, COLLECTIONS.RECORDINGS), recording);
-      
+
       // Update call with recording info
       const callRef = doc(db, COLLECTIONS.CALLS, callId);
       await updateDoc(callRef, {
@@ -285,7 +296,7 @@ class TelemedicineAPI {
         hasRecording: true,
         updatedAt: serverTimestamp()
       });
-      
+
       return { id: docRef.id, ...recording };
     } catch (error) {
       console.error('Error saving recording:', error);
@@ -300,17 +311,17 @@ class TelemedicineAPI {
         collection(db, COLLECTIONS.RECORDINGS),
         where('callId', '==', callId)
       );
-      
+
       const querySnapshot = await getDocs(q);
       const recordings = [];
-      
+
       querySnapshot.forEach((doc) => {
         recordings.push({
           id: doc.id,
           ...doc.data()
         });
       });
-      
+
       return recordings;
     } catch (error) {
       console.error('Error getting call recordings:', error);

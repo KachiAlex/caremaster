@@ -6,6 +6,7 @@
 const http = require('http');
 
 const BASE = 'http://localhost:5002/api';
+let AUTH_COOKIE = null;
 
 function httpRequest(method, path, body, token) {
   return new Promise((resolve, reject) => {
@@ -13,12 +14,14 @@ function httpRequest(method, path, body, token) {
     const headers = { 'Content-Type': 'application/json' };
     if (data) headers['Content-Length'] = Buffer.byteLength(data);
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (AUTH_COOKIE) headers['Cookie'] = AUTH_COOKIE;
     const req = http.request(`${BASE}${path}`, { method, headers }, (res) => {
       let buf = '';
       res.on('data', d => buf += d);
       res.on('end', () => {
-        try { resolve({ status: res.statusCode, body: JSON.parse(buf) }); }
-        catch { resolve({ status: res.statusCode, body: buf }); }
+        let parsed;
+        try { parsed = JSON.parse(buf); } catch { parsed = buf; }
+        resolve({ status: res.statusCode, body: parsed, headers: res.headers });
       });
     });
     req.on('error', reject);
@@ -46,7 +49,17 @@ function httpRequest(method, path, body, token) {
     console.log('Admin login failed:', JSON.stringify(loginRes.body));
     process.exit(1);
   }
-  const token = loginRes.body.data.token;
+  // Auth token is delivered in an HttpOnly cookie (data.token is not in the
+  // JSON body) — capture Set-Cookie and forward it on subsequent requests.
+  const token = loginRes.body.data?.token;
+  const setCookie = loginRes.headers['set-cookie'];
+  if (!token && setCookie && setCookie.length) {
+    AUTH_COOKIE = setCookie[0].split(';')[0];
+  }
+  if (!token && !AUTH_COOKIE) {
+    console.log('No token or auth cookie in login response');
+    process.exit(1);
+  }
   const adminUser = loginRes.body.data.user;
   console.log('Admin login OK. User ID:', adminUser.id);
 

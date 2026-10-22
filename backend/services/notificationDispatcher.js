@@ -178,6 +178,45 @@ async function getUsersByType(institutionId, types) {
   }
 }
 
+// All user_type spellings used for tenant admins and platform super-admins.
+const ADMIN_USER_TYPES = [
+  'admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin', 'institutionAdmin',
+];
+const SUPER_ADMIN_USER_TYPES = ['super-admin', 'superadmin', 'super_admin'];
+
+/**
+ * Resolve who should receive admin-action notifications for a record.
+ * Tenant-tagged records notify that tenant's admins. Untagged records
+ * (e.g. a standalone client's video-consultation request, which every
+ * institution admin can see and schedule) notify all admins + super-admins
+ * so the request can't sit unseen.
+ */
+async function getAdminRecipients(institutionId) {
+  if (institutionId) {
+    return getUsersByType(institutionId, ADMIN_USER_TYPES);
+  }
+  try {
+    return await db('users')
+      .whereIn('user_type', [...ADMIN_USER_TYPES, ...SUPER_ADMIN_USER_TYPES])
+      .select('id', 'email', 'user_type', 'institution_id', 'first_name', 'last_name');
+  } catch (err) {
+    logger.error('notificationDispatcher.getAdminRecipients error:', err);
+    return [];
+  }
+}
+
+/**
+ * In-app destination for an admin notification — institution admins land on
+ * the Clients → Care Requests tab; super-admins land on their dashboard.
+ */
+function adminNavigateTo(admin) {
+  if (SUPER_ADMIN_USER_TYPES.includes(admin?.user_type)) {
+    return '/super-admin/dashboard';
+  }
+  const instParam = admin?.institution_id ? `institution=${admin.institution_id}&` : '';
+  return `/institution-admin/dashboard?${instParam}tab=clients&subTab=care-requests`;
+}
+
 /**
  * Fetch a client record by ID to resolve the assigned doctor / caregiver.
  */
@@ -234,17 +273,24 @@ async function dispatchTableNotifications(tableName, record, actorUser, action) 
       // ─── Appointments (care visit requests) ───────────────────────────
       case 'appointments': {
         if (action === 'create') {
-          // Client created a care visit request → notify admins
-          if (record.status === 'pending' || record.status === 'requested') {
-            const admins = await getUsersByType(institutionId, ['admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin']);
+          // Client created a care visit request that still needs a caregiver
+          // assigned → notify admins. Patients may submit with status
+          // 'scheduled' when they picked a date, so key on the actor role +
+          // missing assignee rather than status alone.
+          const isPatientActor = ['client', 'patient', 'elderly', 'Client'].includes(actorUser.user_type);
+          const needsAssignment = !record.caregiver_id;
+          if (isPatientActor && needsAssignment) {
+            const admins = await getAdminRecipients(institutionId);
             const clientName = record.title || actorName;
             for (const admin of admins) {
               await createNotification(admin.id, {
                 type: TYPE.APPOINTMENT,
                 title: 'New Care Visit Request',
                 message: `${clientName} requested a care visit${record.scheduled_at ? ` for ${new Date(record.scheduled_at).toLocaleDateString()}` : ''}.`,
+                priority: PRIORITY.MEDIUM,
+                institutionId,
                 metadata: {
-                  navigateTo: '/institution-admin/dashboard',
+                  navigateTo: adminNavigateTo(admin),
                   appointmentId: record.id,
                   clientName,
                 },
@@ -311,17 +357,22 @@ async function dispatchTableNotifications(tableName, record, actorUser, action) 
       // ─── Telemedicine appointments (video consultation requests) ────────
       case 'telemedicine_appointments': {
         if (action === 'create' && record.status === 'requested') {
-          const admins = await getUsersByType(institutionId, ['admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin']);
+          const admins = await getAdminRecipients(institutionId);
           const clientName = record.client_name || actorName;
+          const isUrgent = String(record.urgency || '').toLowerCase() === 'urgent';
           for (const admin of admins) {
             await createNotification(admin.id, {
               type: TYPE.CONSULTATION,
               title: 'New Video Consultation Request',
               message: `${clientName} requested a video consultation${record.reason ? `: ${record.reason.substring(0, 80)}` : '.'}`,
+              priority: isUrgent ? PRIORITY.HIGH : PRIORITY.MEDIUM,
+              institutionId,
               metadata: {
-                navigateTo: '/institution-admin/dashboard',
+                navigateTo: adminNavigateTo(admin),
                 appointmentId: record.id,
+                clientId: record.client_id,
                 clientName,
+                urgency: record.urgency || 'normal',
               },
             });
           }

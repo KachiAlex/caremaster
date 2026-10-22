@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import errorHandler from './utils/errorHandler';
 import logger from './utils/logger';
 import InstitutionAdminGuard from './components/InstitutionAdminGuard';
+import GlobalCallHandler from './components/GlobalCallHandler';
 
 // Lazy-load layouts and heavy components to reduce initial bundle size.
 // These are only needed after the user authenticates and their role is
@@ -18,7 +19,7 @@ const Layout = lazy(() => import('./components/Layout'));
 const ClientPortalLayout = lazy(() => import('./components/ClientPortalLayout'));
 const ServiceProviderLayout = lazy(() => import('./components/ServiceProviderLayout'));
 const CaregiverLayout = lazy(() => import('./components/CaregiverLayout'));
-const EnhancedMessagingInterface = lazy(() => import('./components/EnhancedMessagingInterface'));
+const StaffMessages = lazy(() => import('./pages/StaffMessages'));
 const NativeMobileHandler = lazy(() => import('./components/NativeMobileHandler'));
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -63,7 +64,6 @@ const InstitutionCaregiverOnboarding = lazy(() => import('./pages/InstitutionCar
 const InstitutionCaregiverPendingApproval = lazy(() => import('./pages/InstitutionCaregiverPendingApproval'));
 const InstitutionCaregiverDashboard = lazy(() => import('./pages/InstitutionCaregiverDashboard'));
 const InstitutionPharmacyDashboard = lazy(() => import('./pages/InstitutionPharmacyDashboard'));
-const CaregiverMessages = lazy(() => import('./pages/CaregiverMessages'));
 const CaregiverNavigation = lazy(() => import('./pages/CaregiverNavigation'));
 const CaregiverPhotos = lazy(() => import('./pages/CaregiverPhotos'));
 const CaregiverPerformance = lazy(() => import('./pages/CaregiverPerformance'));
@@ -234,7 +234,8 @@ function App() {
   return (
     <ErrorBoundary name="App">
       <UserProvider>
-        <AppContent 
+        <GlobalCallHandler />
+        <AppContent
           isMobile={isMobile}
           isOnline={isOnline}
           showVoiceInterface={showVoiceInterface}
@@ -677,7 +678,7 @@ function AppContent({
         <Route index element={<CaregiverDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
         <Route path="tasks" element={<CaregiverTasks />} />
-        <Route path="messages" element={<EnhancedMessagingInterface />} />
+        <Route path="messages" element={<StaffMessages />} />
         <Route path="navigation" element={<CaregiverNavigation />} />
         <Route path="photos" element={<CaregiverPhotos />} />
         <Route path="performance" element={<CaregiverPerformance />} />
@@ -693,7 +694,7 @@ function AppContent({
         <Route index element={<ServiceProviderDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
         <Route path="routes" element={<RouteOptimization />} />
-        <Route path="messages" element={<EnhancedMessagingInterface />} />
+        <Route path="messages" element={<StaffMessages />} />
         <Route path="tasks" element={<CaregiverTasks />} />
         <Route path="care-logs" element={<CaregiverPhotos />} />
         <Route path="photos" element={<CaregiverPhotos />} />

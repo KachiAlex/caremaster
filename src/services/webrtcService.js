@@ -23,6 +23,9 @@ class WebRTCService {
       rtt: 0,
       quality: 'good'
     };
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 3;
+    this.reconnectTimer = null;
     this.callbacks = {
       onLocalStream: null,
       onRemoteStream: null,
@@ -145,6 +148,9 @@ class WebRTCService {
       // immediately terminate the call.
       if (this.peerConnection.iceConnectionState === 'failed') {
         this.endCall();
+      } else if (this.peerConnection.iceConnectionState === 'disconnected') {
+        // Attempt ICE restart for temporary network drops
+        this.attemptIceRestart();
       }
     };
   }
@@ -493,6 +499,13 @@ class WebRTCService {
   // End the call
   async endCall() {
     try {
+      // Clear reconnect timer
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      this.reconnectAttempts = 0;
+
       // Stop stats monitoring
       this.stopStatsMonitoring();
 
@@ -514,7 +527,7 @@ class WebRTCService {
           collection(db, 'calls'),
           where('callId', '==', this.callId)
         );
-        
+
         // This would need to be handled differently in a real implementation
         // For now, we'll just log it
         console.log('Call ended:', this.callId);
@@ -534,6 +547,40 @@ class WebRTCService {
       console.error('Error ending call:', error);
       throw error;
     }
+  }
+
+  // Attempt ICE restart for temporary network drops
+  async attemptIceRestart() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.warn('Max reconnection attempts reached, ending call');
+      this.endCall();
+      return;
+    }
+
+    this.reconnectAttempts++;
+    console.log(`Attempting ICE restart (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+    // Wait before attempting restart (backoff)
+    const backoffDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 5000);
+
+    this.reconnectTimer = setTimeout(async () => {
+      try {
+        if (!this.peerConnection) return;
+
+        // Create a new offer to trigger ICE restart
+        if (this.isInitiator) {
+          const offer = await this.peerConnection.createOffer({ iceRestart: true });
+          await this.peerConnection.setLocalDescription(offer);
+          await this.sendSignalingMessage('offer', { offer });
+        }
+
+        console.log('ICE restart offer sent');
+      } catch (error) {
+        console.error('ICE restart failed:', error);
+        // If restart fails, end the call
+        this.endCall();
+      }
+    }, backoffDelay);
   }
 
   // Best-effort 'end' signal for page unload — a regular fetch is cancelled

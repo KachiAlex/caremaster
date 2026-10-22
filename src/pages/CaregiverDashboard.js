@@ -45,8 +45,6 @@ import NurseVitalsInput from '../components/NurseVitalsInput';
 import NurseCareLogs from '../components/NurseCareLogs';
 import NurseReportGenerator from '../components/NurseReportGenerator';
 import NurseMedicationManager from '../components/NurseMedicationManager';
-import CallService from '../services/callService';
-import CallInterface from '../components/CallInterface';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 import { toast } from 'react-toastify';
 
@@ -68,12 +66,8 @@ const CaregiverDashboard = () => {
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   
-  // Call-related states
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [activeCall, setActiveCall] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
-  const [callService] = useState(() => new CallService());
 
   // Back navigation — close modals first, then previous tab, then browser history
   const closeAllModals = () => {
@@ -467,87 +461,7 @@ const CaregiverDashboard = () => {
     if (found) setSelectedClient(found);
   }, [selectedClientId, assignedClients]);
 
-  // Set up incoming call listener
-  useEffect(() => {
-    if (!userProfile || (!userProfile.id && !userProfile.uid)) {
-      return;
-    }
-    
-    const userId = userProfile.id || userProfile.uid || user?.uid;
-    console.log('🎧 Setting up call listener for user:', userId, 'role:', userProfile.userType);
-    
-    const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {
-      console.log('📞 Incoming call notification:', callNotification);
-      
-      if (callNotification.status === 'incoming') {
-        setIncomingCall({
-          callId: callNotification.callId,
-          callerId: callNotification.callerId,
-          callType: callNotification.callType,
-          timestamp: callNotification.timestamp
-        });
-        toast.info(`Incoming ${callNotification.callType} call...`);
-      }
-    });
-    
-    return () => {
-      console.log('🔌 Cleaning up call listener');
-      if (unsubscribe) unsubscribe();
-    };
-  }, [userProfile, user, callService]);
-
-  // Handle incoming call acceptance
-  const handleAcceptCall = async () => {
-    if (!incomingCall) return;
-    
-    try {
-      const userId = userProfile.id || userProfile.uid || user?.uid;
-      await callService.answerCall(incomingCall.callId, userId);
-      
-      setActiveCall({
-        callId: incomingCall.callId,
-        participantId: incomingCall.callerId,
-        participantName: 'Caller',
-        callType: incomingCall.callType
-      });
-      setIncomingCall(null);
-      console.log('✅ Call accepted');
-      toast.success('Call accepted');
-    } catch (error) {
-      console.error('Error accepting call:', error);
-      toast.error('Failed to accept call');
-    }
-  };
-
-  // Handle incoming call rejection
-  const handleRejectCall = async () => {
-    if (!incomingCall) return;
-    
-    try {
-      const userId = userProfile.id || userProfile.uid || user?.uid;
-      await callService.rejectCall(incomingCall.callId, userId);
-      setIncomingCall(null);
-      console.log('❌ Call rejected');
-      toast.info('Call rejected');
-    } catch (error) {
-      console.error('Error rejecting call:', error);
-      toast.error('Failed to reject call');
-    }
-  };
-
-  // Handle active call end
-  const handleEndCall = async () => {
-    if (!activeCall) return;
-    
-    try {
-      await callService.endCall(activeCall.callId);
-      setActiveCall(null);
-      console.log('✅ Call ended');
-      toast.info('Call ended');
-    } catch (error) {
-      console.error('Error ending call:', error);
-    }
-  };
+  // Incoming calls are handled app-wide by GlobalCallHandler (mounted in App).
 
   // Doctor action guards and navigation helpers
   const requireClient = () => {
@@ -1721,38 +1635,6 @@ const CaregiverDashboard = () => {
         />
       )}
       
-      {/* Incoming Call Interface */}
-      {incomingCall && (
-        <CallInterface
-          isOpen={!!incomingCall}
-          onClose={handleRejectCall}
-          callType={incomingCall.callType}
-          participantInfo={{
-            id: incomingCall.callerId,
-            name: 'Incoming Call',
-            role: 'user'
-          }}
-          isIncoming={true}
-          onCallAccepted={handleAcceptCall}
-          onCallRejected={handleRejectCall}
-        />
-      )}
-      
-      {/* Active Call Interface */}
-      {activeCall && (
-        <CallInterface
-          isOpen={!!activeCall}
-          onClose={handleEndCall}
-          callType={activeCall.callType}
-          participantInfo={{
-            id: activeCall.participantId,
-            name: activeCall.participantName,
-            role: 'user'
-          }}
-          isIncoming={false}
-        />
-      )}
-
       {/* Task Details Modal */}
       {showTaskDetailsModal && selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowTaskDetailsModal(false)}>

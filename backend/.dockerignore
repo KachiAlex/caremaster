@@ -1,0 +1,12 @@
+node_modules
+logs
+.env
+.env.*
+*.log
+test_*.js
+create_ui_test_caregiver.js
+check_caregiver_schema.js
+gen_hash.js
+npm-debug.log
+.DS_Store
+coverage

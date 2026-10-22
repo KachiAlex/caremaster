@@ -600,21 +600,6 @@ class CallService {
     this.activeCall = null;
   }
 
-  // Update call notification status
-  async updateCallNotificationStatus(notificationId, status) {
-    try {
-      const notificationRef = doc(db, 'callNotifications', notificationId);
-      await updateDoc(notificationRef, {
-        status: status,
-        updatedAt: serverTimestamp()
-      });
-      console.log(`✅ Call notification ${notificationId} updated to ${status}`);
-    } catch (error) {
-      console.error('Error updating call notification status:', error);
-      throw error;
-    }
-  }
-
   // Listen for WebRTC signaling messages
   listenForSignaling(callId, onSignalingMessage) {
     const signalingQuery = query(

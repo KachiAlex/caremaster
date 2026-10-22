@@ -1,0 +1,21 @@
+# coturn configuration template for the caremaster-turn container.
+# Copy to /etc/turnserver.conf on the host, set a strong credential, and
+# adjust external-ip to the server's public address.
+
+listening-port=3478
+tls-listening-port=5349
+
+# Long-term credential mechanism — username:password pairs the API hands out
+# via /api/turn-credentials.
+lt-cred-mech
+user=caremaster:REPLACE_WITH_STRONG_CREDENTIAL
+realm=caremaster.com
+
+# REQUIRED for TURN relay behind NAT: host's public IP.
+external-ip=REPLACE_WITH_PUBLIC_IP
+
+# Logging / behaviour
+log-file=stdout
+verbose
+fingerprint
+mobility

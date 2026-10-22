@@ -13,3 +13,16 @@ README.md
 coverage
 .nyc_output
 
+# Backend is containerized separately via backend/Dockerfile
+backend/node_modules
+backend/logs
+backend/.env
+backend/.env.*
+backend/test_*.js
+
+# Deployment artifacts not needed in the image
+deploy/
+*.tar.gz
+*.docx
+COMMIT_MSG.txt
+DEPLOY_NOW.txt
