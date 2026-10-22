@@ -269,31 +269,61 @@ function scopeParticipantTable(query, tableName, identityIds) {
  * Admin (institution) scoping for participant tables: institution-tagged
  * rows, or rows belonging to the tenant's conversations/calls.
  */
-function scopeParticipantTableForAdmin(query, tableName, institutionId) {
+function scopeParticipantTableForAdmin(query, tableName, institutionId, identityIds) {
+  const participantClause = (alias) => function() {
+    for (const id of identityIds) {
+      this.orWhereRaw(`${alias}.participants @> ?::jsonb`, [JSON.stringify([id])]);
+    }
+  };
   switch (tableName) {
     case 'conversations':
-      query.where('conversations.institution_id', institutionId);
+      query.where(function() {
+        this.where('conversations.institution_id', institutionId)
+          .orWhere(participantClause('conversations'));
+      });
       break;
     case 'messages':
       query.whereIn('messages.conversation_id', function() {
-        this.select(db.raw('id::text')).from('conversations').where('institution_id', institutionId);
+        this.select(db.raw('id::text')).from('conversations').where(function() {
+          this.where('institution_id', institutionId)
+            .orWhere(participantClause('conversations'));
+        });
       });
       break;
     case 'calls':
-      query.where('calls.institution_id', institutionId);
+      query.where(function() {
+        this.where('calls.institution_id', institutionId)
+          .orWhereIn('calls.caller_id', identityIds)
+          .orWhereIn('calls.recipient_id', identityIds)
+          .orWhereIn('calls.receiver_id', identityIds);
+      });
       break;
     case 'call_notifications':
-      query.whereIn('call_notifications.call_id', function() {
-        this.select('call_id').from('calls').where('institution_id', institutionId);
+      // Notifications addressed to the admin are always visible; institution
+      // scoping additionally covers calls within the tenant.
+      query.where(function() {
+        this.whereIn('call_notifications.user_id', identityIds)
+          .orWhereIn('call_notifications.call_id', function() {
+            this.select('call_id').from('calls').where('institution_id', institutionId);
+          });
       });
       break;
     case 'signaling':
       query.where(function() {
         this.whereIn('signaling.call_id', function() {
-          this.select('call_id').from('calls').where('institution_id', institutionId);
+          this.select('call_id').from('calls').where(function() {
+            this.where('institution_id', institutionId)
+              .orWhereIn('caller_id', identityIds)
+              .orWhereIn('recipient_id', identityIds)
+              .orWhereIn('receiver_id', identityIds);
+          });
         }).orWhereIn('signaling.call_id', function() {
           this.select(db.raw("'consult_' || id::text")).from('telemedicine_appointments')
-            .where('institution_id', institutionId);
+            .where(function() {
+              this.where('institution_id', institutionId)
+                .orWhereIn('client_id', identityIds)
+                .orWhereIn('doctor_id', identityIds);
+            });
         });
       });
       break;
@@ -390,16 +420,15 @@ async function scopeQuery(query, user, tableName) {
   }
 
   // Participant-scoped collaboration tables — membership decides visibility
-  // for non-admins; institution scoping for admins (strict per tenant).
+  // for non-admins; institution scoping for admins (strict per tenant), plus
+  // rows where the admin is themselves a participant (e.g. an incoming call
+  // from outside the tenant).
   if (PARTICIPANT_TABLES.includes(tableName)) {
-    if (ADMIN_ROLES.includes(userType) && user.institution_id) {
-      return scopeParticipantTableForAdmin(query, tableName, user.institution_id);
-    }
-    if (ADMIN_ROLES.includes(userType)) {
-      query.whereRaw('1=0');
-      return query;
-    }
     const identityIds = await getUserIdentityIds(user.id);
+    if (ADMIN_ROLES.includes(userType) && user.institution_id) {
+      return scopeParticipantTableForAdmin(query, tableName, user.institution_id, identityIds);
+    }
+    // Admins without a tenant and all other roles: participant-only.
     return scopeParticipantTable(query, tableName, identityIds);
   }
 

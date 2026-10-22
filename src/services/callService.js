@@ -299,7 +299,11 @@ class CallService {
           if (notification.status === 'incoming') {
             const notificationTime = notification.timestamp?.toDate?.() || new Date(notification.timestamp);
             const now = new Date();
-            const timeDiff = (now - notificationTime) / 1000; // seconds
+            // An unparseable timestamp yields NaN — treat it as fresh rather
+            // than silently expiring a live incoming call.
+            const timeDiff = isNaN(notificationTime.getTime())
+              ? 0
+              : (now - notificationTime) / 1000; // seconds
 
             // Only show if call is less than 2 minutes old
             if (timeDiff < 120) {
