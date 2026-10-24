@@ -468,6 +468,41 @@ async function scopeQuery(query, user, tableName) {
 
   // Patient/client/elderly: scope to their own records
   if (PATIENT_ROLES.includes(userType)) {
+    // Special case: users table — patients can see admin accounts so they
+    // can start conversations and calls with them (the same contact-list
+    // exception caregivers and doctors get for tenant-wide messaging).
+    // Visible rows: own record, admin users in the patient's institution,
+    // and platform super-admins as the support contact for unaffiliated
+    // clients. Sensitive fields are stripped by stripSensitiveFields.
+    if (tableName === 'users') {
+      let institutionId = user.institution_id;
+      if (!institutionId) {
+        // Some client accounts are linked to a tenant only via clients row
+        try {
+          const clientRow = await db('clients')
+            .where({ user_id: user.id })
+            .select('institution_id')
+            .first();
+          institutionId = clientRow?.institution_id || null;
+        } catch (err) {
+          logger.error('Failed to resolve client institution for users scoping:', err);
+        }
+      }
+      const superAdminTypes = [...new Set([...SUPER_ADMIN_ROLES, 'super_admin'])];
+      const adminTypes = [...new Set([...ADMIN_ROLES, 'institution_admin', 'institutionadmin', 'institutionAdmin'])];
+      query.where(function() {
+        this.where('users.id', user.id)
+          .orWhereIn('users.user_type', superAdminTypes);
+        if (institutionId) {
+          this.orWhere(function() {
+            this.where('users.institution_id', institutionId)
+              .whereIn('users.user_type', adminTypes);
+          });
+        }
+      });
+      return query;
+    }
+
     const ownerCol = OWNER_COLUMN[tableName];
     if (ownerCol) {
       if (tableName === 'telemedicine_appointments') {

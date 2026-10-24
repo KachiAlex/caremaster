@@ -2,6 +2,12 @@ import { collection, doc, addDoc, getDocs, onSnapshot, updateDoc, deleteDoc, que
 import { auth, db } from '../backend/config';;
 import { buildConstraints } from './deviceSettingsService';;
 
+// Session-level ICE configuration cache. TURN credentials are static for
+// the session (env-driven on the backend), and a fresh WebRTCService is
+// created per call — without a shared cache every call paid a
+// /turn-credentials round-trip before setup could even start.
+let sharedIceConfigPromise = null;
+
 class WebRTCService {
   constructor() {
     this.localStream = null;
@@ -16,6 +22,10 @@ class WebRTCService {
     // With polling-based signaling, candidates routinely beat the offer/
     // answer — they'd be dropped by addIceCandidate without this queue.
     this.pendingIceCandidates = [];
+    // Outbound ICE candidates are batched into a single signaling row
+    // (debounced) — one POST instead of ~15 on constrained links.
+    this.outboundIceQueue = [];
+    this.iceFlushTimer = null;
     this.networkStats = {
       bandwidth: 0,
       packetLoss: 0,
@@ -38,44 +48,51 @@ class WebRTCService {
     // ICE config is fetched from the backend so TURN credentials are not
     // exposed in the frontend bundle. Until it is loaded, we start with STUN only.
     this.configuration = null;
-    this.iceConfigPromise = null;
   }
 
-  // Fetch ICE configuration from the backend (cached for the service lifetime)
+  // Fetch ICE configuration from the backend (cached once per session —
+  // shared across all WebRTCService instances).
   async getIceConfiguration() {
     if (this.configuration) return this.configuration;
-    if (this.iceConfigPromise) return this.iceConfigPromise;
-
-    this.iceConfigPromise = (async () => {
-      try {
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
-        const baseUrl = process.env.REACT_APP_API_URL || '';
-        const res = await fetch(`${baseUrl}/turn-credentials`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
-        if (res.ok) {
-          const data = await res.json();
-          return data;
+    if (!sharedIceConfigPromise) {
+      sharedIceConfigPromise = (async () => {
+        try {
+          const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+          const baseUrl = process.env.REACT_APP_API_URL || '';
+          const res = await fetch(`${baseUrl}/turn-credentials`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          });
+          if (res.ok) {
+            const data = await res.json();
+            return data;
+          }
+        } catch (error) {
+          console.error('Failed to fetch TURN credentials, falling back to STUN only:', error);
         }
-      } catch (error) {
-        console.error('Failed to fetch TURN credentials, falling back to STUN only:', error);
-      }
-      return {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' },
-          { urls: 'stun:stun3.l.google.com:19302' },
-          { urls: 'stun:stun4.l.google.com:19302' },
-        ],
-        iceCandidatePoolSize: 10,
-        bundlePolicy: 'max-bundle',
-        rtcpMuxPolicy: 'require'
-      };
-    })();
+        return {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+          ],
+          iceCandidatePoolSize: 10,
+          bundlePolicy: 'max-bundle',
+          rtcpMuxPolicy: 'require'
+        };
+      })();
+    }
 
-    this.configuration = await this.iceConfigPromise;
+    this.configuration = await sharedIceConfigPromise;
     return this.configuration;
+  }
+
+  // Warm the shared ICE config (e.g. on app mount) so the first call doesn't
+  // pay the credentials round-trip on the call critical path.
+  static preloadIceConfiguration() {
+    const svc = new WebRTCService();
+    return svc.getIceConfiguration();
   }
 
   // Initialize the WebRTC service
@@ -92,6 +109,11 @@ class WebRTCService {
       this.remoteStream = null;
       this.localStream = null;
       this.pendingIceCandidates = [];
+      this.outboundIceQueue = [];
+      if (this.iceFlushTimer) {
+        clearTimeout(this.iceFlushTimer);
+        this.iceFlushTimer = null;
+      }
 
       await this.setupPeerConnection();
       return true;
@@ -159,11 +181,12 @@ class WebRTCService {
   async getUserMedia(constraints = { video: true, audio: true }) {
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
-      
+
       // Add tracks to peer connection
       this.localStream.getTracks().forEach(track => {
         this.peerConnection.addTrack(track, this.localStream);
       });
+      this.applyBandwidthCaps();
 
       if (this.callbacks.onLocalStream) {
         this.callbacks.onLocalStream(this.localStream);
@@ -184,30 +207,36 @@ class WebRTCService {
 
       // Create call document — but only if it doesn't exist yet. Most callers
       // already created the row via callService.initiateCall; a second insert
-      // leaves a stale 'initiating' row behind.
-      try {
-        const existing = await getDocs(query(collection(db, 'calls'), where('callId', '==', callId), limit(1)));
-        if (existing.empty) {
-          await addDoc(collection(db, 'calls'), {
-            callId,
-            callerId: this.getCurrentUserId(),
-            recipientId,
-            callType,
-            status: 'initiating',
-            createdAt: serverTimestamp(),
-            endedAt: null
-          });
+      // leaves a stale 'initiating' row behind. The check runs while media is
+      // being acquired (off the serialized path) but is still awaited before
+      // the offer POST: the backend requires the calls row to exist before
+      // it accepts signaling writes.
+      const ensureRecord = (async () => {
+        try {
+          const existing = await getDocs(query(collection(db, 'calls'), where('callId', '==', callId), limit(1)));
+          if (existing.empty) {
+            await addDoc(collection(db, 'calls'), {
+              callId,
+              callerId: this.getCurrentUserId(),
+              recipientId,
+              callType,
+              status: 'initiating',
+              createdAt: serverTimestamp(),
+              endedAt: null
+            });
+          }
+        } catch (e) {
+          console.warn('Call-record existence check failed, continuing:', e.message);
         }
-      } catch (e) {
-        console.warn('Call-record existence check failed, continuing:', e.message);
-      }
+      })();
 
       // Get user media
-      const mediaConstraints = callType === 'video' 
+      const mediaConstraints = callType === 'video'
         ? { video: true, audio: true }
         : { video: false, audio: true };
-      
+
       await this.getUserMedia(mediaConstraints);
+      await ensureRecord;
 
       // Create offer
       const offer = await this.peerConnection.createOffer();
@@ -336,6 +365,12 @@ class WebRTCService {
     }
 
     try {
+      // Control-plane messages go out immediately — flush queued ICE
+      // candidates first so they aren't stranded behind an answer/reject.
+      if (type !== 'ice-candidate') {
+        await this.flushOutboundIce();
+      }
+
       const from = this.getCurrentUserId();
       const baseDoc = {
         callId: this.callId,
@@ -345,16 +380,21 @@ class WebRTCService {
       };
 
       if (type === 'ice-candidate' && data.candidate) {
-        // Store ICE candidate in the `candidate` jsonb column
-        await addDoc(collection(db, 'signaling'), {
-          ...baseDoc,
-          candidate: {
-            candidate: data.candidate.candidate,
-            sdpMLineIndex: data.candidate.sdpMLineIndex,
-            sdpMid: data.candidate.sdpMid,
-            usernameFragment: data.candidate.usernameFragment
-          }
+        // Batch ICE candidates into a single signaling row (debounced
+        // flush) — one POST instead of ~15 sequential ones on slow links.
+        this.outboundIceQueue.push({
+          candidate: data.candidate.candidate,
+          sdpMLineIndex: data.candidate.sdpMLineIndex,
+          sdpMid: data.candidate.sdpMid,
+          usernameFragment: data.candidate.usernameFragment
         });
+        if (!this.iceFlushTimer) {
+          this.iceFlushTimer = setTimeout(() => {
+            this.iceFlushTimer = null;
+            this.flushOutboundIce();
+          }, 250);
+        }
+        return;
       } else if (type === 'offer' || type === 'answer') {
         // Store SDP in the `sdp` text column (serialize RTCSessionDescription)
         const sdp = data.offer?.sdp || data.answer?.sdp || (typeof data === 'string' ? data : JSON.stringify(data));
@@ -378,6 +418,30 @@ class WebRTCService {
     } catch (error) {
       console.error('Error sending signaling message:', error);
       throw error;
+    }
+  }
+
+  // Flush queued outbound ICE candidates as a single signaling row.
+  // The `candidate` column carries { candidates: [...] }; receivers fan
+  // the batch back out, so old single-candidate senders still interop.
+  async flushOutboundIce() {
+    if (this.iceFlushTimer) {
+      clearTimeout(this.iceFlushTimer);
+      this.iceFlushTimer = null;
+    }
+    const batch = this.outboundIceQueue;
+    if (!batch.length || !this.callId) return;
+    this.outboundIceQueue = [];
+    try {
+      await addDoc(collection(db, 'signaling'), {
+        callId: this.callId,
+        type: 'ice-candidate',
+        from: this.getCurrentUserId(),
+        timestamp: serverTimestamp(),
+        candidate: { candidates: batch }
+      });
+    } catch (error) {
+      console.error('Error sending batched ICE candidates:', error);
     }
   }
 
@@ -407,6 +471,15 @@ class WebRTCService {
             timestamp: raw.timestamp,
           };
 
+          // A batched ICE row fans back out into one message per candidate —
+          // downstream handlers keep the single-candidate shape.
+          if (raw.type === 'ice-candidate' && Array.isArray(raw.candidate?.candidates)) {
+            raw.candidate.candidates.forEach((candidate) => {
+              onMessage({ ...message, data: { candidate } });
+            });
+            return;
+          }
+
           if (raw.type === 'offer' || raw.type === 'answer') {
             // Reconstruct RTCSessionDescriptionInit
             message.data = {
@@ -426,6 +499,22 @@ class WebRTCService {
           onMessage(message);
         }
       });
+    });
+  }
+
+  // Cap the video send bitrate for low-bandwidth links. The camera may
+  // still open at 720p, but the encoder stays under ~800 kbps and sheds
+  // resolution before framerate or audio when the network can't keep up.
+  applyBandwidthCaps() {
+    if (!this.peerConnection) return;
+    this.peerConnection.getSenders().forEach((sender) => {
+      if (!sender.track || sender.track.kind !== 'video') return;
+      try {
+        const params = sender.getParameters() || {};
+        params.degradationPreference = 'maintain-framerate';
+        params.encodings = [{ ...(params.encodings?.[0] || {}), maxBitrate: 800000 }];
+        sender.setParameters(params).catch(() => {});
+      } catch (e) { /* older browsers — caps simply don't apply */ }
     });
   }
 
@@ -532,6 +621,14 @@ class WebRTCService {
         // For now, we'll just log it
         console.log('Call ended:', this.callId);
       }
+
+      // Drop unsent outbound ICE candidates for the ended call
+      if (this.iceFlushTimer) {
+        clearTimeout(this.iceFlushTimer);
+        this.iceFlushTimer = null;
+      }
+      this.outboundIceQueue = [];
+      this.pendingIceCandidates = [];
 
       // Reset state
       this.callId = null;
@@ -755,6 +852,7 @@ class WebRTCService {
         await sender.replaceTrack(videoTrack);
       } else {
         this.peerConnection.addTrack(videoTrack, this.screenStream);
+        this.applyBandwidthCaps();
       }
 
       // Handle screen share ended
@@ -904,11 +1002,12 @@ class WebRTCService {
 
       console.log('📹 Getting user media with constraints:', finalConstraints);
       this.localStream = await navigator.mediaDevices.getUserMedia(finalConstraints);
-      
+
       // Add tracks to peer connection
       this.localStream.getTracks().forEach(track => {
         this.peerConnection.addTrack(track, this.localStream);
       });
+      this.applyBandwidthCaps();
 
       if (this.callbacks.onLocalStream) {
         this.callbacks.onLocalStream(this.localStream);
@@ -917,15 +1016,16 @@ class WebRTCService {
       return this.localStream;
     } catch (error) {
       console.error('❌ Error accessing media devices:', error);
-      
+
       // Try fallback with basic constraints
       try {
         console.log('🔄 Trying fallback with basic constraints...');
         this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        
+
         this.localStream.getTracks().forEach(track => {
           this.peerConnection.addTrack(track, this.localStream);
         });
+        this.applyBandwidthCaps();
 
         if (this.callbacks.onLocalStream) {
           this.callbacks.onLocalStream(this.localStream);

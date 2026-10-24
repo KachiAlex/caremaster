@@ -20,6 +20,7 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { sendMessage, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages, markConversationAsRead } from '../api/messagesAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
+import { getAllUsers } from '../api/usersAPI';
 import { toast } from 'react-toastify';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
@@ -28,12 +29,20 @@ import { buildConstraints } from '../services/deviceSettingsService';
 import { collection, query, where, onSnapshot } from 'backend/database';
 import { db } from '../backend/config';
 
+// Admin accounts a client may start conversations/calls with — the backend
+// scopes the users read for patients to exactly these roles (institution
+// admins in their tenant plus platform super-admins).
+const ADMIN_CONTACT_ROLES = new Set([
+  'admin', 'institution-admin', 'institution_admin', 'institutionadmin', 'institutionAdmin',
+  'super-admin', 'superadmin', 'super_admin',
+]);
+
 const Messages = ({
   contactLoader,
   newChatTitle = 'Start New Chat',
-  contactsLoadingText = 'Loading your caregivers...',
-  contactsEmptyTitle = 'No assigned caregivers found.',
-  contactsEmptyHint = 'Ask your institution to assign a caregiver to start chatting.',
+  contactsLoadingText = 'Loading your contacts...',
+  contactsEmptyTitle = 'No contacts found.',
+  contactsEmptyHint = 'Your care team and admin contacts will appear here.',
   containerClassName = 'h-[calc(100vh-8rem)] flex bg-white rounded-lg shadow-sm border border-gray-200',
 } = {}) => {
   const { user, userProfile } = useUser();
@@ -222,23 +231,34 @@ const Messages = ({
     const callerName = userProfile?.name || userProfile?.displayName || 'User';
     const recipientName = recipient?.name || getOtherParticipantName();
 
+    let ringCallId = null;
+    let svc = null;
+    let callCanceled = false;
     try {
-      // 1. Call record + notification to the recipient
-      const result = await callService.initiateCall({
-        callerId,
-        recipientId,
-        callType,
-        callerName,
-        recipientName,
-      });
-
-      // 2. WebRTC peer + media + offer over the signaling channel
-      const svc = new WebRTCService();
-      await svc.initialize();
+      // 1. Ring the recipient (call row → server-created 'incoming'
+      //    notification = one round-trip) while WebRTC + media setup runs in
+      //    parallel — a slow camera/mic prompt no longer delays the ring.
+      svc = new WebRTCService();
       setupWebrtcCallbacks(svc);
+      const [result] = await Promise.all([
+        callService.initiateCall({
+          callerId,
+          recipientId,
+          callType,
+          callerName,
+          recipientName,
+        }).then((r) => { ringCallId = r.callId; return r; }),
+        (async () => {
+          await svc.initialize();
+          const stream = await svc.getUserMedia(buildConstraints(callType));
+          // Call was canceled while the permission prompt was open
+          if (callCanceled) stream.getTracks().forEach(t => t.stop());
+        })(),
+      ]);
+
+      // 2. Offer over the signaling channel
       svc.callId = result.callId;
       svc.isInitiator = true;
-      await svc.getUserMedia(buildConstraints(callType));
       const offer = await svc.peerConnection.createOffer();
       await svc.peerConnection.setLocalDescription(offer);
       await svc.sendSignalingMessage('offer', { offer, callType });
@@ -278,6 +298,11 @@ const Messages = ({
     } catch (error) {
       console.error('Error starting call:', error);
       toast.error('Failed to start call. Please try again.');
+      callCanceled = true;
+      if (svc) svc.endCall().catch(() => {});
+      // The ring may already have gone out — cancel it so the callee isn't
+      // left with a phantom incoming call.
+      if (ringCallId) callService.endCall(ringCallId, 0).catch(() => {});
       cleanupCall();
     }
   };
@@ -303,24 +328,45 @@ const Messages = ({
   // ─── New chat functionality ───
 
   // Default contact source: the client's assigned staff (caregivers, nurses,
-  // doctors). Backend scopes results to the authenticated patient/client.
+  // doctors) plus admin accounts they may reach directly. The backend scopes
+  // both results to the authenticated patient/client.
   const defaultContactLoader = async () => {
     const patientId = userProfile?.id || userProfile?.uid || user?.uid;
     if (!patientId) return [];
 
-    const assignments = await assignmentAPI.getAssignmentsByClient();
+    const [assignments, users] = await Promise.all([
+      assignmentAPI.getAssignmentsByClient(),
+      getAllUsers().catch(() => []),
+    ]);
+
     const seen = new Set();
-    return (assignments || [])
-      .map(a => ({
+    const contacts = [];
+
+    // Admin accounts first — clients need a direct line to their
+    // institution's admins (and platform super-admins for support).
+    for (const u of users || []) {
+      const role = u?.userType || u?.user_type || u?.role || '';
+      if (!u?.id || isMe(u.id) || seen.has(String(u.id)) || !ADMIN_CONTACT_ROLES.has(role)) continue;
+      seen.add(String(u.id));
+      contacts.push({
+        id: u.id,
+        name: u.name || u.displayName || [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.email || 'Admin',
+        role,
+      });
+    }
+
+    for (const a of assignments || []) {
+      const c = {
         id: a.caregiverId || a.caregiver_id,
         name: a.caregiverName || a.caregiver_name || 'Staff Member',
         role: a.assignedToRole || a.assigned_to_role || a.caregiverRole || a.role || 'caregiver',
-      }))
-      .filter(c => {
-        if (!c.id || c.id === patientId || seen.has(c.id)) return false;
-        seen.add(c.id);
-        return true;
-      });
+      };
+      if (!c.id || isMe(c.id) || seen.has(String(c.id))) continue;
+      seen.add(String(c.id));
+      contacts.push(c);
+    }
+
+    return contacts;
   };
 
   // Load contacts for the "New Chat" dialog

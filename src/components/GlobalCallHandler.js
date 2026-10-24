@@ -74,6 +74,12 @@ const GlobalCallHandler = () => {
     };
   }, [webrtc]);
 
+  // Warm the session-cached TURN/STUN config once we're authenticated so a
+  // first call doesn't pay the credentials round-trip on the call path.
+  useEffect(() => {
+    if (myId) WebRTCService.preloadIceConfiguration().catch(() => {});
+  }, [myId]);
+
   // Incoming call listener — the service only reports fresh 'incoming'
   // notifications, so every event here is a call addressed to me.
   useEffect(() => {
@@ -105,16 +111,21 @@ const GlobalCallHandler = () => {
     return () => { if (unsubscribe) unsubscribe(); };
   }, [myId, activeCall, incomingCall, callService]);
 
-  // Accept — notification-level answer, then WebRTC answer + signaling listener
+  // Accept — notification-level answer and WebRTC/media setup run in
+  // parallel: the caller gets the 'answered' flip without waiting for this
+  // side's camera/mic permission prompt.
   const handleAcceptCall = async () => {
     if (!incomingCall) return;
     try {
-      await callService.answerCall(incomingCall.callId, myId);
-
       const svc = new WebRTCService();
-      await svc.initialize();
-      setupWebrtcCallbacks(svc);
-      await svc.answerCall(incomingCall.callId, incomingCall.callType);
+      await Promise.all([
+        callService.answerCall(incomingCall.callId, myId),
+        (async () => {
+          await svc.initialize();
+          setupWebrtcCallbacks(svc);
+          await svc.answerCall(incomingCall.callId, incomingCall.callType);
+        })(),
+      ]);
 
       signalingUnsubRef.current = svc.listenForSignaling(incomingCall.callId, async (msg) => {
         try {

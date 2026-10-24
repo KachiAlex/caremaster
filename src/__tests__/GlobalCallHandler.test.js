@@ -47,6 +47,7 @@ const makeWebrtc = () => ({
 jest.mock('../services/webrtcService', () => ({
   __esModule: true,
   default: class {
+    static preloadIceConfiguration() { return Promise.resolve(); }
     constructor() {
       mockLastWebrtc = makeWebrtc();
       return mockLastWebrtc;

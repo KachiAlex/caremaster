@@ -1138,6 +1138,16 @@ router.post('/:table', async (req, res) => {
       if (!isParty) {
         return res.status(403).json({ success: false, message: 'You are not a participant in this call' });
       }
+      // The calls POST now creates the callee's 'incoming' notification
+      // server-side — dedupe the legacy second POST from older clients.
+      if (data.status === 'incoming' && data.user_id) {
+        const existing = await db('call_notifications')
+          .where({ call_id: data.call_id, user_id: data.user_id, status: 'incoming' })
+          .first();
+        if (existing) {
+          return res.status(200).json({ success: true, data: stripSensitiveFields(mapToCamelCase(existing)) });
+        }
+      }
     } else if (tableName === 'signaling') {
       // Signaling messages are the WebRTC control plane — only channel
       // participants may write, and the sender is always the authenticated
@@ -1284,8 +1294,66 @@ router.post('/:table', async (req, res) => {
       responseData.loginAccount = autoAccount;
     }
 
+    // A new call rings the callee immediately — create the 'incoming' call
+    // notification in the same request so the frontend doesn't need a second
+    // round-trip before the recipient's device can ring.
+    if (tableName === 'calls' && record.recipient_id) {
+      try {
+        const notifData = await dropUnknownColumns('call_notifications', {
+          user_id: record.recipient_id,
+          call_id: record.call_id,
+          caller_id: record.caller_id,
+          call_type: record.call_type,
+          caller_name: record.caller_name,
+          recipient_name: record.recipient_name,
+          status: 'incoming',
+          timestamp: new Date(),
+        });
+        const [notif] = await db('call_notifications').insert(notifData).returning('*');
+        emitDataEvent(req, 'callNotifications', notif);
+      } catch (notifErr) {
+        // Non-fatal — the call row exists; legacy clients still POST the
+        // notification themselves as a fallback.
+        logger.warn(`Failed to create incoming-call notification for ${record.call_id}:`, notifErr.message);
+      }
+    }
+
     // Notify connected clients about the new record
     emitDataEvent(req, table, record);
+
+    // Signaling rows are the RTC control plane — push the SSE wake-up to BOTH
+    // call parties. getEventUserIds only sees the sender's `from`, and the
+    // institution fallback misses cross-tenant calls entirely, which left the
+    // peer waiting on the 1s polling interval.
+    if (tableName === 'signaling' && record.call_id) {
+      (async () => {
+        try {
+          let partyIds = [];
+          if (String(record.call_id).startsWith('consult_')) {
+            const apptId = String(record.call_id).slice('consult_'.length);
+            if (UUID_RE.test(apptId)) {
+              const appt = await db('telemedicine_appointments').where({ id: apptId }).first();
+              if (appt) partyIds = [appt.client_id, appt.doctor_id].filter(Boolean);
+            }
+          } else {
+            const call = await db('calls').where({ call_id: record.call_id }).first();
+            if (call) partyIds = [call.caller_id, call.recipient_id, call.receiver_id].filter(Boolean);
+          }
+          if (partyIds.length) {
+            // Resolve client-row ids to canonical user ids — SSE clients are
+            // keyed by the authenticated users.id.
+            const { ids } = await resolveParticipants(partyIds);
+            sseManager.emitTableEvent('signaling', record, {
+              userIds: ids.length ? ids : partyIds,
+              institutionId: req.user?.institution_id || req.user?.institutionId,
+            });
+          }
+        } catch (sigErr) {
+          // Non-fatal — the polling fallback still delivers the message.
+          logger.warn('Failed to emit signaling SSE to call parties:', sigErr.message);
+        }
+      })();
+    }
 
     // Server-side notification dispatch — creates notification rows for
     // care-relevant tables so notifications fire even if the actor's

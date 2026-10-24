@@ -66,21 +66,25 @@ class CallService {
         duration: 0
       };
 
-      // Create call document
+      // Create call document — the backend atomically creates the callee's
+      // 'incoming' call_notifications row in this same request, so the ring
+      // goes out in one round-trip instead of two.
       console.log('📄 Creating call document in Database...');
       const callDoc = await addDoc(collection(db, 'calls'), callData);
       console.log('✅ Call document created:', callDoc.id);
 
-      // Send call notification
+      // Fire-and-forget: newer backends already created the 'incoming'
+      // notification inside the calls POST (the server dedupes this), but
+      // keeping the POST preserves the ring if the app is ever pointed at
+      // an older backend. Not awaited — it's off the ring critical path.
       console.log('🔔 Sending call notification to recipient:', finalRecipientId);
-      await this.sendCallNotification(finalRecipientId, {
+      this.sendCallNotification(finalRecipientId, {
         callId,
         callerId,
         callType: finalCallType,
         status: 'incoming',
         callerName: callerName || null
-      });
-      console.log('✅ Call notification sent successfully');
+      }).catch(err => console.warn('Call notification fallback failed:', err));
 
       this.activeCall = { ...callData, id: callDoc.id };
 
@@ -96,49 +100,50 @@ class CallService {
     }
   }
 
-  // Answer a call
+  // Answer a call — lookups and writes are parallelized so the caller sees
+  // the 'answered' flip in ~2 round-trips instead of ~5 on slow links.
   async answerCall(callId, recipientId) {
     try {
       const callsQuery = query(
         collection(db, 'calls'),
         where('callId', '==', callId)
       );
-
-      const snapshot = await getDocs(callsQuery);
-      if (snapshot.empty) {
-        throw new Error('Call not found');
-      }
-
-      const callDoc = snapshot.docs[0];
-      await updateDoc(callDoc.ref, {
-        status: 'answered',
-        answeredAt: serverTimestamp()
-      });
-
-      // Update the original incoming call notification to answered
       const notificationsQuery = query(
         collection(db, 'callNotifications'),
         where('callId', '==', callId),
         where('userId', '==', recipientId),
         where('status', '==', 'incoming')
       );
-      
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      const updatePromises = notificationsSnapshot.docs.map(doc => 
-        updateDoc(doc.ref, {
-          status: 'answered',
-          updatedAt: serverTimestamp()
-        })
-      );
-      await Promise.all(updatePromises);
-      console.log(`✅ Updated ${notificationsSnapshot.size} call notifications to answered`);
 
-      // Send answer notification to caller
-      await this.sendCallNotification(callDoc.data().callerId, {
-        callId,
-        recipientId,
-        status: 'answered'
-      });
+      const [snapshot, notificationsSnapshot] = await Promise.all([
+        getDocs(callsQuery),
+        getDocs(notificationsQuery)
+      ]);
+      if (snapshot.empty) {
+        throw new Error('Call not found');
+      }
+
+      const callDoc = snapshot.docs[0];
+      await Promise.all([
+        updateDoc(callDoc.ref, {
+          status: 'answered',
+          answeredAt: serverTimestamp()
+        }),
+        // Update the original incoming call notification to answered
+        ...notificationsSnapshot.docs.map(doc =>
+          updateDoc(doc.ref, {
+            status: 'answered',
+            updatedAt: serverTimestamp()
+          })
+        ),
+        // Send answer notification to caller
+        this.sendCallNotification(callDoc.data().callerId, {
+          callId,
+          recipientId,
+          status: 'answered'
+        })
+      ]);
+      console.log(`✅ Updated ${notificationsSnapshot.size} call notifications to answered`);
 
       return { success: true };
     } catch (error) {
@@ -155,41 +160,42 @@ class CallService {
         where('callId', '==', callId)
       );
 
-      const snapshot = await getDocs(callsQuery);
-      if (snapshot.empty) {
-        throw new Error('Call not found');
-      }
-
-      const callDoc = snapshot.docs[0];
-      await updateDoc(callDoc.ref, {
-        status: 'rejected',
-        endedAt: serverTimestamp()
-      });
-
-      // Update the original incoming call notification to rejected
       const notificationsQuery = query(
         collection(db, 'callNotifications'),
         where('callId', '==', callId),
         where('userId', '==', recipientId),
         where('status', '==', 'incoming')
       );
-      
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      const updatePromises = notificationsSnapshot.docs.map(doc => 
-        updateDoc(doc.ref, {
-          status: 'rejected',
-          updatedAt: serverTimestamp()
-        })
-      );
-      await Promise.all(updatePromises);
-      console.log(`✅ Updated ${notificationsSnapshot.size} call notifications to rejected`);
 
-      // Send rejection notification to caller
-      await this.sendCallNotification(callDoc.data().callerId, {
-        callId,
-        recipientId,
-        status: 'rejected'
-      });
+      const [snapshot, notificationsSnapshot] = await Promise.all([
+        getDocs(callsQuery),
+        getDocs(notificationsQuery)
+      ]);
+      if (snapshot.empty) {
+        throw new Error('Call not found');
+      }
+
+      const callDoc = snapshot.docs[0];
+      await Promise.all([
+        updateDoc(callDoc.ref, {
+          status: 'rejected',
+          endedAt: serverTimestamp()
+        }),
+        // Update the original incoming call notification to rejected
+        ...notificationsSnapshot.docs.map(doc =>
+          updateDoc(doc.ref, {
+            status: 'rejected',
+            updatedAt: serverTimestamp()
+          })
+        ),
+        // Send rejection notification to caller
+        this.sendCallNotification(callDoc.data().callerId, {
+          callId,
+          recipientId,
+          status: 'rejected'
+        })
+      ]);
+      console.log(`✅ Updated ${notificationsSnapshot.size} call notifications to rejected`);
 
       return { success: true };
     } catch (error) {
