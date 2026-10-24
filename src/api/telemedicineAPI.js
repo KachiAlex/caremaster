@@ -92,6 +92,35 @@ class TelemedicineAPI {
     }
   }
 
+  // Admin: get recently resolved consultation requests (scheduled /
+  // in-progress / completed) so handled requests stay visible instead of
+  // dropping out of the pending list.
+  async getResolvedRequests(limitCount = 20) {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.APPOINTMENTS),
+        where('status', 'in', ['scheduled', 'in-progress', 'completed', 'cancelled']),
+        orderBy('updatedAt', 'desc'),
+        limit(limitCount)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const requests = [];
+
+      querySnapshot.forEach((doc) => {
+        requests.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+
+      return requests;
+    } catch (error) {
+      console.error('Error getting resolved requests:', error);
+      throw error;
+    }
+  }
+
   // Admin: schedule a request by assigning a doctor and date
   async scheduleRequest(requestId, scheduleData) {
     try {

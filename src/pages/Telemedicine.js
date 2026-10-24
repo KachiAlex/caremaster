@@ -300,7 +300,7 @@ const Telemedicine = () => {
           <h2 className="text-lg font-semibold text-gray-900">My Video Consultations</h2>
         </div>
         <div className="space-y-4">
-          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled' || apt.status === 'in-progress').sort((a, b) => {
+          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled' || apt.status === 'in-progress' || apt.status === 'cancelled').sort((a, b) => {
             const aTime = a.appointmentDate ? new Date(a.appointmentDate).getTime() : 0;
             const bTime = b.appointmentDate ? new Date(b.appointmentDate).getTime() : 0;
             return aTime - bTime;
@@ -358,6 +358,14 @@ const Telemedicine = () => {
                       {appointment.type === 'video' ? <Video className="h-4 w-4 mr-2" /> : <Phone className="h-4 w-4 mr-2" />}
                       Join Call
                     </button>
+                  ) : appointment.status === 'cancelled' ? (
+                    <span
+                      className="btn btn-secondary opacity-60 cursor-not-allowed"
+                      title="This request was cancelled"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancelled
+                    </span>
                   ) : (
                     <button
                       disabled
@@ -372,7 +380,7 @@ const Telemedicine = () => {
               </div>
             </div>
           ))}
-          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled' || apt.status === 'in-progress').length === 0 && (
+          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled' || apt.status === 'in-progress' || apt.status === 'cancelled').length === 0 && (
             <div className="text-center py-8 text-gray-500">
               No video consultations or requests yet.
             </div>

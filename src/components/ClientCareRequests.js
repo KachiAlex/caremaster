@@ -24,6 +24,7 @@ import { getAllUsers } from '../api/usersAPI';
 
 const ClientCareRequests = ({ institutionId }) => {
   const [requests, setRequests] = useState([]);
+  const [resolvedRequests, setResolvedRequests] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [caregivers, setCaregivers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,9 +46,10 @@ const ClientCareRequests = ({ institutionId }) => {
     try {
       setLoading(true);
 
-      const [pendingVideo, allAppointments] = await Promise.all([
+      const [pendingVideo, allAppointments, resolvedVideo] = await Promise.all([
         telemedicineAPI.getPendingRequests(),
-        getAllAppointments().catch(() => [])
+        getAllAppointments().catch(() => []),
+        telemedicineAPI.getResolvedRequests().catch(() => [])
       ]);
 
       // Load users once for name resolution and assignee lists
@@ -121,6 +123,53 @@ const ClientCareRequests = ({ institutionId }) => {
       });
 
       setRequests(normalized);
+
+      // Resolved requests — scheduled/assigned, completed or cancelled.
+      // Kept visible so handled requests don't just vanish from the queue.
+      const resolvedCare = (allAppointments || []).filter(apt => {
+        if (apt.status === 'scheduled') {
+          return !!(apt.caregiverId || apt.caregiver_id || apt.caregiverName);
+        }
+        return apt.status === 'completed' || apt.status === 'cancelled';
+      });
+
+      const normalizedResolved = [
+        ...(resolvedVideo || []).map(r => {
+          const clientId = r.clientId || r.client_id || r.patientId || r.patient_id;
+          const doctorId = r.doctorId || r.doctor_id;
+          return {
+            id: `video-${r.id}`,
+            clientName: r.clientName || r.client_name || getUserName(clientId, 'Client'),
+            requestType: 'video',
+            displayType: 'Video Consultation',
+            assigneeName: r.doctorName || r.doctor_name || getUserName(doctorId, 'Doctor'),
+            scheduledFor: r.appointmentDate || r.appointment_date,
+            status: r.status,
+            resolvedAt: r.updatedAt || r.updated_at || r.createdAt || r.created_at
+          };
+        }),
+        ...resolvedCare.map(r => {
+          const clientId = r.clientId || r.patientId || r.patient_id || r.client_id;
+          const caregiverId = r.caregiverId || r.caregiver_id;
+          return {
+            id: `care-${r.id}`,
+            clientName: r.clientName || r.client_name || r.title || getUserName(clientId, 'Client'),
+            requestType: 'care',
+            displayType: 'Care Visit',
+            assigneeName: r.caregiverName || r.caregiver_name || getUserName(caregiverId, 'Caregiver'),
+            scheduledFor: r.scheduledTime || r.scheduled_time || r.scheduled_at,
+            status: r.status,
+            resolvedAt: r.updatedAt || r.updated_at || r.createdAt || r.created_at
+          };
+        })
+      ];
+
+      normalizedResolved.sort((a, b) => {
+        const aTime = a.resolvedAt ? new Date(a.resolvedAt?.toDate ? a.resolvedAt.toDate() : a.resolvedAt).getTime() : 0;
+        const bTime = b.resolvedAt ? new Date(b.resolvedAt?.toDate ? b.resolvedAt.toDate() : b.resolvedAt).getTime() : 0;
+        return bTime - aTime;
+      });
+      setResolvedRequests(normalizedResolved.slice(0, 15));
 
       setDoctors(allUsers.filter(u =>
         u.user_type === 'doctor' || u.type === 'doctor' || u.userType === 'doctor'
@@ -479,6 +528,55 @@ const ClientCareRequests = ({ institutionId }) => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Recently Resolved — handled requests stay visible with their outcome
+          instead of disappearing from the queue. */}
+      {resolvedRequests.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+              Recently Resolved
+            </h3>
+            <span className="text-sm text-gray-500">{resolvedRequests.length}</span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {resolvedRequests.map((req) => {
+              const when = formatDateTime(req.scheduledFor);
+              const statusStyles = {
+                scheduled: 'bg-blue-100 text-blue-800',
+                'in-progress': 'bg-yellow-100 text-yellow-800',
+                completed: 'bg-green-100 text-green-800',
+                cancelled: 'bg-red-100 text-red-800',
+              };
+              return (
+                <div key={req.id} className="px-6 py-4 flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    req.requestType === 'video' ? 'bg-purple-100 text-purple-600' : 'bg-green-100 text-green-600'
+                  }`}>
+                    {req.requestType === 'video' ? <Video className="h-5 w-5" /> : <Heart className="h-5 w-5" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-2">
+                      <span className="font-medium text-gray-900">{req.clientName}</span>
+                      <span className="text-xs text-gray-500">{req.displayType}</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        statusStyles[req.status] || 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {req.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      {req.assigneeName} · {when.date} {when.time}
+                      {req.resolvedAt ? ` · ${formatTimeAgo(req.resolvedAt)}` : ''}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

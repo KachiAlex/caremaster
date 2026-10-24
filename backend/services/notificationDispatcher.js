@@ -15,6 +15,9 @@ const { logger } = require('../utils/logger');
 const { shouldNotify, getEmailRecipient } = require('../routes/notificationPreferences');
 const webPush = require('./webPush');
 const emailService = require('./emailService');
+const sseManager = require('../sse');
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Notification type constants (mirror the frontend)
 const TYPE = {
@@ -254,6 +257,134 @@ function displayName(user) {
 }
 
 /**
+ * Resolve a loose identifier (users.id, users.firebase_uid, or clients.id)
+ * to the canonical users.id so conversations/messages reference the auth
+ * identity consistently.
+ */
+async function resolveCanonicalUserId(id) {
+  if (!id) return null;
+  const s = String(id);
+  try {
+    const candidates = [s];
+    if (UUID_RE.test(s)) {
+      const client = await db('clients').where({ id: s }).select('user_id').first();
+      if (client?.user_id) candidates.push(String(client.user_id));
+    }
+    for (const candidate of candidates) {
+      const user = UUID_RE.test(candidate)
+        ? await db('users').where({ id: candidate }).select('id').first()
+        : null;
+      if (user) return String(user.id);
+      const byUid = await db('users').where({ firebase_uid: candidate }).select('id').first();
+      if (byUid) return String(byUid.id);
+    }
+    return null;
+  } catch (err) {
+    logger.error('notificationDispatcher.resolveCanonicalUserId error:', err);
+    return null;
+  }
+}
+
+/**
+ * Find an existing direct conversation between two canonical users.id values,
+ * or create one. Mirrors normalizeConversationData in routes/data.js so the
+ * row has canonical participants, participant_details and institution_id.
+ */
+async function ensureDirectConversation(userA, userB, institutionId) {
+  const participants = [String(userA), String(userB)];
+  const existing = await db('conversations')
+    .whereRaw('participants @> ?::jsonb', [JSON.stringify([participants[0]])])
+    .whereRaw('participants @> ?::jsonb', [JSON.stringify([participants[1]])])
+    .whereRaw('jsonb_array_length(participants) = 2')
+    .first();
+  if (existing) return existing;
+
+  const users = await db('users').whereIn('id', participants)
+    .select('id', 'first_name', 'last_name', 'email', 'user_type', 'institution_id');
+  const byId = new Map(users.map(u => [String(u.id), u]));
+  const details = participants.map(pid => {
+    const u = byId.get(pid);
+    return { id: pid, name: displayName(u), role: u?.user_type || 'unknown' };
+  });
+  const tenant = institutionId || byId.get(participants[0])?.institution_id
+    || byId.get(participants[1])?.institution_id || null;
+
+  const [created] = await db('conversations').insert({
+    participants: JSON.stringify(participants),
+    participant_details: JSON.stringify(details),
+    conversation_type: 'general',
+    institution_id: tenant,
+    created_at: new Date(),
+    updated_at: new Date(),
+  }).returning('*');
+
+  sseManager.emitTableEvent('conversations', created, {
+    userIds: participants,
+    institutionId: tenant,
+  });
+  return created;
+}
+
+/**
+ * Post an admin's scheduling response as a real chat message in the
+ * admin↔client conversation so it appears in the client's Messages tab
+ * (and lets the client reply or call the admin back directly).
+ * Returns the conversation_id, or null if no message could be sent.
+ */
+async function sendConsultationResponseMessage(record, actorUser) {
+  try {
+    const adminId = actorUser?.id ? String(actorUser.id) : null;
+    const clientUserId = await resolveCanonicalUserId(record.client_id);
+    if (!adminId || !clientUserId || adminId === clientUserId) return null;
+
+    const conversation = await ensureDirectConversation(
+      adminId, clientUserId, record.institution_id || actorUser.institution_id || null
+    );
+
+    const doctorName = record.doctor_name || 'a doctor';
+    const apptDate = record.appointment_date ? new Date(record.appointment_date) : null;
+    const dateStr = apptDate && !isNaN(apptDate.getTime())
+      ? `${apptDate.toLocaleDateString()} at ${apptDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+      : 'a time to be confirmed';
+    const text = `Your video consultation has been scheduled with ${doctorName} on ${dateStr} (${record.duration || 30} min). Reply here if you need to reschedule.`;
+
+    const now = new Date();
+    const [message] = await db('messages').insert({
+      conversation_id: conversation.id,
+      sender_id: adminId,
+      sender_name: displayName(actorUser),
+      receiver_id: clientUserId,
+      text,
+      content: text,
+      message_type: 'text',
+      read: false,
+      institution_id: conversation.institution_id || record.institution_id || null,
+      sent_at: now,
+      created_at: now,
+    }).returning('*');
+
+    const preview = text.slice(0, 120);
+    await db('conversations').where({ id: conversation.id }).update({
+      last_message: preview,
+      last_message_time: now,
+      last_message_at: now,
+      last_message_preview: preview,
+      updated_at: now,
+    });
+
+    const userIds = [adminId, clientUserId];
+    const instId = conversation.institution_id || record.institution_id || null;
+    sseManager.emitTableEvent('messages', message, { userIds, institutionId: instId });
+    sseManager.emitTableEvent('conversations', { ...conversation, last_message: preview, last_message_time: now }, { userIds, institutionId: instId });
+
+    return conversation.id;
+  } catch (err) {
+    logger.error('notificationDispatcher.sendConsultationResponseMessage error:', err);
+    return null;
+  }
+}
+
+/**
  * Main dispatch function — called after a record is created or updated.
  * Examines the table + record + action and creates appropriate notifications.
  *
@@ -261,8 +392,9 @@ function displayName(user) {
  * @param {object} record - The created/updated record (snake_case DB row)
  * @param {object} actorUser - The authenticated user from req.user
  * @param {string} action - 'create' or 'update'
+ * @param {object} [previousRecord] - The row before an update, when available
  */
-async function dispatchTableNotifications(tableName, record, actorUser, action) {
+async function dispatchTableNotifications(tableName, record, actorUser, action, previousRecord) {
   if (!record || !actorUser) return;
 
   try {
@@ -377,6 +509,14 @@ async function dispatchTableNotifications(tableName, record, actorUser, action) 
             });
           }
         } else if (action === 'update' && record.status === 'scheduled') {
+          // Post the admin's response into an admin↔client conversation so it
+          // shows in the client's Messages tab — only on the transition to
+          // 'scheduled' (later edits/re-schedules don't re-send).
+          let conversationId = null;
+          if (previousRecord?.status !== 'scheduled') {
+            conversationId = await sendConsultationResponseMessage(record, actorUser);
+          }
+
           // Notify doctor
           if (record.doctor_id) {
             await createNotification(record.doctor_id, {
@@ -389,15 +529,17 @@ async function dispatchTableNotifications(tableName, record, actorUser, action) 
               },
             });
           }
-          // Notify client
+          // Notify client — deep-link into the conversation carrying the
+          // scheduling response when one was created.
           if (record.client_id) {
             await createNotification(record.client_id, {
               type: TYPE.CONSULTATION,
               title: 'Video Consultation Scheduled',
               message: `Your video consultation has been scheduled with ${record.doctor_name || 'a doctor'}${record.appointment_date ? ` on ${new Date(record.appointment_date).toLocaleDateString()} at ${new Date(record.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}.`,
               metadata: {
-                navigateTo: '/telemedicine',
+                navigateTo: conversationId ? `/messages?conversation=${conversationId}` : '/telemedicine',
                 appointmentId: record.id,
+                conversationId: conversationId || undefined,
               },
             });
           }

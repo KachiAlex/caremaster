@@ -1519,7 +1519,9 @@ router.put('/:table/:id', async (req, res) => {
 
     // Server-side notification dispatch — creates notification rows for
     // care-relevant status changes (scheduled, completed, cancelled, etc.)
-    dispatchTableNotifications(tableName, record, req.user, 'update').catch(() => {});
+    // previousRecord lets the dispatcher detect status transitions so
+    // responses (e.g. the consultation scheduling message) only fire once.
+    dispatchTableNotifications(tableName, record, req.user, 'update', existingRecord).catch(() => {});
 
     res.json({ success: true, data: stripSensitiveFields(mapToCamelCase(record), { revealLockState: isAdminViewer(req.user) }) });
   } catch (error) {
