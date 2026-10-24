@@ -12,8 +12,10 @@ import { db } from '../backend/config';
 //      table to their linked user account, since conversation participants
 //      are user ids. Clients without a user account can't receive messages
 //      and are skipped.
+// Super-admin roles are deliberately absent — platform admins are isolated
+// from tenants and never appear as staff contacts.
 const STAFF_ROLES = new Set([
-  'admin', 'super-admin', 'superadmin', 'institution-admin', 'institutionadmin',
+  'admin', 'institution-admin', 'institutionadmin',
   'institution_admin', 'institutionAdmin',
   'caregiver', 'nurse', 'doctor', 'pharmacist',
   'service-provider', 'serviceProvider', 'partner',

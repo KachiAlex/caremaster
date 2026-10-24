@@ -191,6 +191,95 @@ const PARTICIPANT_TABLES = [
   'signaling',
 ];
 
+// ─── Super-admin isolation ───
+// Super-admins manage the platform from their own portal and must be
+// invisible to tenant users: no contact discovery, no conversations, no
+// calls in either direction. The id list is cached briefly — role changes
+// are rare and a stale list only delays enforcement by up to a minute.
+const SUPER_ADMIN_ROLE_VARIANTS = ['super-admin', 'superadmin', 'super_admin'];
+let superAdminIdCache = { ids: [], ts: 0 };
+async function getSuperAdminIds() {
+  const now = Date.now();
+  if (now - superAdminIdCache.ts < 60000) return superAdminIdCache.ids;
+  try {
+    const ids = (await db('users')
+      .whereIn('user_type', SUPER_ADMIN_ROLE_VARIANTS)
+      .pluck('id')).map(String);
+    superAdminIdCache = { ids, ts: now };
+  } catch (err) {
+    logger.error('Failed to load super-admin ids for isolation scoping:', err);
+  }
+  return superAdminIdCache.ids;
+}
+
+/**
+ * Remove rows that involve a super-admin party from a participant-scoped
+ * query — tenant users must never see super-admin conversations, calls,
+ * or their signaling/notification rows, even if they are a participant
+ * on a conversation that predates the isolation rule.
+ */
+function excludeSuperAdminRows(query, tableName, superAdminIds) {
+  if (!superAdminIds.length) return query;
+
+  const noSuperAdminParticipants = (alias) => function() {
+    for (const sid of superAdminIds) {
+      this.whereRaw(`NOT (${alias}.participants @> ?::jsonb)`, [JSON.stringify([sid])]);
+    }
+    // participant_details.role catches rows whose participants array stores
+    // non-canonical ids (firebase_uid, clients row id) for the super-admin.
+    for (const role of SUPER_ADMIN_ROLE_VARIANTS) {
+      this.whereRaw(
+        `NOT (COALESCE(${alias}.participant_details, '[]'::jsonb) @> ?::jsonb)`,
+        [JSON.stringify([{ role }])]
+      );
+    }
+  };
+  const notSuperAdminCall = (alias, col) => function() {
+    // NOT IN evaluates to NULL on NULL columns — treat NULL as allowed.
+    this.whereNull(`${alias}.${col}`).orWhereNotIn(`${alias}.${col}`, superAdminIds);
+  };
+
+  switch (tableName) {
+    case 'conversations':
+      query.where(noSuperAdminParticipants('conversations'));
+      break;
+    case 'messages':
+      query.whereNotIn('messages.conversation_id', function() {
+        this.select(db.raw('id::text')).from('conversations').where(function() {
+          for (const sid of superAdminIds) {
+            this.orWhereRaw(`conversations.participants @> ?::jsonb`, [JSON.stringify([sid])]);
+          }
+          for (const role of SUPER_ADMIN_ROLE_VARIANTS) {
+            this.orWhereRaw(
+              `COALESCE(conversations.participant_details, '[]'::jsonb) @> ?::jsonb`,
+              [JSON.stringify([{ role }])]
+            );
+          }
+        });
+      });
+      break;
+    case 'calls':
+      for (const col of ['caller_id', 'recipient_id', 'receiver_id']) {
+        query.where(notSuperAdminCall('calls', col));
+      }
+      break;
+    case 'call_notifications':
+      query.where(notSuperAdminCall('call_notifications', 'caller_id'));
+      break;
+    case 'signaling':
+      query.where(notSuperAdminCall('signaling', 'from'));
+      query.whereNotIn('signaling.call_id', function() {
+        this.select('call_id').from('calls').where(function() {
+          for (const col of ['caller_id', 'recipient_id', 'receiver_id']) {
+            this.orWhereIn(`calls.${col}`, superAdminIds);
+          }
+        });
+      });
+      break;
+  }
+  return query;
+}
+
 /**
  * All identifier forms that may refer to this user inside denormalized
  * columns like conversations.participants: canonical users.id, legacy
@@ -215,7 +304,7 @@ async function getUserIdentityIds(userId) {
  * Scope a participant-table query so non-admin users only see rows for
  * conversations/calls they belong to.
  */
-function scopeParticipantTable(query, tableName, identityIds) {
+function scopeParticipantTable(query, tableName, identityIds, superAdminIds = []) {
   const participantClause = (alias) => function() {
     for (const id of identityIds) {
       this.orWhereRaw(`${alias}.participants @> ?::jsonb`, [JSON.stringify([id])]);
@@ -262,14 +351,14 @@ function scopeParticipantTable(query, tableName, identityIds) {
     default:
       query.whereRaw('1=0');
   }
-  return query;
+  return excludeSuperAdminRows(query, tableName, superAdminIds);
 }
 
 /**
  * Admin (institution) scoping for participant tables: institution-tagged
  * rows, or rows belonging to the tenant's conversations/calls.
  */
-function scopeParticipantTableForAdmin(query, tableName, institutionId, identityIds) {
+function scopeParticipantTableForAdmin(query, tableName, institutionId, identityIds, superAdminIds = []) {
   const participantClause = (alias) => function() {
     for (const id of identityIds) {
       this.orWhereRaw(`${alias}.participants @> ?::jsonb`, [JSON.stringify([id])]);
@@ -330,7 +419,7 @@ function scopeParticipantTableForAdmin(query, tableName, institutionId, identity
     default:
       query.whereRaw('1=0');
   }
-  return query;
+  return excludeSuperAdminRows(query, tableName, superAdminIds);
 }
 
 /**
@@ -425,11 +514,14 @@ async function scopeQuery(query, user, tableName) {
   // from outside the tenant).
   if (PARTICIPANT_TABLES.includes(tableName)) {
     const identityIds = await getUserIdentityIds(user.id);
+    // Super-admins are invisible to tenants — rows involving them are
+    // excluded from every participant-scoped read below.
+    const superAdminIds = await getSuperAdminIds();
     if (ADMIN_ROLES.includes(userType) && user.institution_id) {
-      return scopeParticipantTableForAdmin(query, tableName, user.institution_id, identityIds);
+      return scopeParticipantTableForAdmin(query, tableName, user.institution_id, identityIds, superAdminIds);
     }
     // Admins without a tenant and all other roles: participant-only.
-    return scopeParticipantTable(query, tableName, identityIds);
+    return scopeParticipantTable(query, tableName, identityIds, superAdminIds);
   }
 
   // Admin: scope by institution_id if the table has it
@@ -471,9 +563,10 @@ async function scopeQuery(query, user, tableName) {
     // Special case: users table — patients can see admin accounts so they
     // can start conversations and calls with them (the same contact-list
     // exception caregivers and doctors get for tenant-wide messaging).
-    // Visible rows: own record, admin users in the patient's institution,
-    // and platform super-admins as the support contact for unaffiliated
-    // clients. Sensitive fields are stripped by stripSensitiveFields.
+    // Visible rows: own record and admin users in the patient's institution.
+    // Platform super-admins are deliberately excluded — they are isolated
+    // from tenants and reachable only through the super-admin portal.
+    // Sensitive fields are stripped by stripSensitiveFields.
     if (tableName === 'users') {
       let institutionId = user.institution_id;
       if (!institutionId) {
@@ -488,11 +581,9 @@ async function scopeQuery(query, user, tableName) {
           logger.error('Failed to resolve client institution for users scoping:', err);
         }
       }
-      const superAdminTypes = [...new Set([...SUPER_ADMIN_ROLES, 'super_admin'])];
       const adminTypes = [...new Set([...ADMIN_ROLES, 'institution_admin', 'institutionadmin', 'institutionAdmin'])];
       query.where(function() {
-        this.where('users.id', user.id)
-          .orWhereIn('users.user_type', superAdminTypes);
+        this.where('users.id', user.id);
         if (institutionId) {
           this.orWhere(function() {
             this.where('users.institution_id', institutionId)
@@ -541,11 +632,11 @@ async function scopeQuery(query, user, tableName) {
       if (hasInstitutionId && user.institution_id) {
         query.where(`${tableName}.institution_id`, user.institution_id);
       } else {
-        // Fallback: own record + assigned patients + platform/institution
-        // admins, so caregivers without an institution_id can still reach an
-        // admin to message.
+        // Fallback: own record + assigned patients + institution admins, so
+        // caregivers without an institution_id can still reach an admin to
+        // message. Super-admins are excluded — they are isolated from tenants.
         const allowedIds = [user.id, ...patientIds];
-        const adminTypes = [...new Set([...ADMIN_ROLES, ...SUPER_ADMIN_ROLES, 'institution_admin', 'institutionAdmin'])];
+        const adminTypes = [...new Set([...ADMIN_ROLES, 'institution_admin', 'institutionAdmin'])];
         query.where(function() {
           this.whereIn(`${tableName}.id`, allowedIds)
             .orWhereIn(`${tableName}.user_type`, adminTypes);
@@ -942,6 +1033,12 @@ async function canSignalChannel(user, channelName) {
     }
     const call = await db('calls').where({ call_id: channelName }).first();
     if (!call) return false;
+    // Super-admin isolation: no tenant user may signal on a channel that
+    // involves a platform super-admin (e.g. a call created before isolation).
+    const superAdminIds = await getSuperAdminIds();
+    if ([call.caller_id, call.recipient_id, call.receiver_id].some(id => superAdminIds.includes(String(id)))) {
+      return false;
+    }
     if (isAdmin) return call.institution_id === user.institution_id;
     return [call.caller_id, call.recipient_id, call.receiver_id]
       .map(String).some(id => identityIds.includes(id));

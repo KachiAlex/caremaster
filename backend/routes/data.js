@@ -216,6 +216,7 @@ const USER_PRIVILEGED_FIELDS = [
 ];
 
 const ELEVATED_ROLES = ['super-admin', 'superadmin', 'super_admin'];
+const SUPER_ADMIN_TYPES = new Set(ELEVATED_ROLES);
 
 /**
  * Strip privileged account fields from a users-table write. Applies to
@@ -508,6 +509,25 @@ async function resolveParticipants(participantIds) {
 }
 
 /**
+ * Super-admin isolation: does this conversation involve a platform
+ * super-admin? Checks the denormalized participant_details first (free),
+ * then resolves the participants array to canonical users.
+ */
+async function conversationInvolvesSuperAdmin(conversation) {
+  const stored = Array.isArray(conversation.participant_details)
+    ? conversation.participant_details
+    : (() => { try { return JSON.parse(conversation.participant_details || '[]'); } catch { return []; } })();
+  if (stored.some(d => d && SUPER_ADMIN_TYPES.has(d.role))) return true;
+
+  const participants = Array.isArray(conversation.participants)
+    ? conversation.participants
+    : (() => { try { return JSON.parse(conversation.participants || '[]'); } catch { return []; } })();
+  if (!participants.length) return false;
+  const { details } = await resolveParticipants(participants);
+  return details.some(d => SUPER_ADMIN_TYPES.has(d.role));
+}
+
+/**
  * Normalize a conversations insert/update: canonical participant ids,
  * participant_details, and institution_id derived from participants.
  */
@@ -518,6 +538,13 @@ async function normalizeConversationData(data, req) {
     out.participants = ids;
     if (details.length) {
       out.participant_details = details;
+    }
+
+    // Super-admin isolation: tenant users cannot open a conversation with a
+    // platform super-admin — they exist only inside the super-admin portal.
+    if (!SUPER_ADMIN_TYPES.has(req.user.user_type) &&
+        details.some(d => SUPER_ADMIN_TYPES.has(d.role))) {
+      return { ok: false, error: 'Platform administrators cannot be added to conversations' };
     }
     if (!out.institution_id) {
       const uuidIds = ids.filter(p => UUID_RE.test(p));
@@ -564,6 +591,13 @@ async function normalizeMessageData(data, req) {
   const identityIds = await getUserIdentityIds(req.user.id);
   if (!isConversationParticipant(conversation, identityIds)) {
     return { ok: false, error: 'You are not a participant in this conversation' };
+  }
+
+  // Super-admin isolation: tenant users cannot write into a conversation
+  // that involves a platform super-admin, even if it predates the rule.
+  if (!SUPER_ADMIN_TYPES.has(req.user.user_type) &&
+      await conversationInvolvesSuperAdmin(conversation)) {
+    return { ok: false, error: 'This conversation is not available' };
   }
 
   out.sender_id = req.user.id;
@@ -1129,6 +1163,15 @@ router.post('/:table', async (req, res) => {
       if (!data.call_id) data.call_id = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       if (!data.channel_name) data.channel_name = `call_${data.call_id}`;
       if (!data.institution_id && req.user.institution_id) data.institution_id = req.user.institution_id;
+      // Super-admin isolation: tenant users cannot call platform super-admins.
+      if (!SUPER_ADMIN_TYPES.has(req.user.user_type)) {
+        const { details } = await resolveParticipants(
+          [data.recipient_id, data.receiver_id].filter(Boolean)
+        );
+        if (details.some(d => SUPER_ADMIN_TYPES.has(d.role))) {
+          return res.status(403).json({ success: false, message: 'Platform administrators cannot be called' });
+        }
+      }
     } else if (tableName === 'call_notifications' && data.call_id) {
       // Only participants of the referenced call may create notifications
       const call = await db('calls').where({ call_id: data.call_id }).first();

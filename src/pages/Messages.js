@@ -31,10 +31,10 @@ import { db } from '../backend/config';
 
 // Admin accounts a client may start conversations/calls with — the backend
 // scopes the users read for patients to exactly these roles (institution
-// admins in their tenant plus platform super-admins).
+// admins in their tenant). Platform super-admins are isolated from tenants
+// and never appear here.
 const ADMIN_CONTACT_ROLES = new Set([
   'admin', 'institution-admin', 'institution_admin', 'institutionadmin', 'institutionAdmin',
-  'super-admin', 'superadmin', 'super_admin',
 ]);
 
 const Messages = ({
@@ -343,7 +343,7 @@ const Messages = ({
     const contacts = [];
 
     // Admin accounts first — clients need a direct line to their
-    // institution's admins (and platform super-admins for support).
+    // institution's admins.
     for (const u of users || []) {
       const role = u?.userType || u?.user_type || u?.role || '';
       if (!u?.id || isMe(u.id) || seen.has(String(u.id)) || !ADMIN_CONTACT_ROLES.has(role)) continue;

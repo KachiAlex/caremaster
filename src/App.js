@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthState } from 'backend/auth-hooks';
 import { auth, db } from './backend/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'backend/database';
@@ -260,7 +260,23 @@ function AppContent({
   showGestureControls, 
   setShowGestureControls 
 }) {
-  const { user, loading } = useUser();
+  const { user, userProfile, userRole, loading } = useUser();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Super-admins are confined to the /super-admin portal — any other route
+  // (including the login page while already authenticated) bounces them
+  // back to their dashboard.
+  const isSuperAdminUser = userRole === 'super-admin' ||
+    userProfile?.userType === 'super-admin' ||
+    userProfile?.user_type === 'super-admin';
+  useEffect(() => {
+    if (loading || !user || !isSuperAdminUser) return;
+    const path = location.pathname;
+    if (!path.startsWith('/super-admin') || path === '/super-admin/login') {
+      navigate('/super-admin/dashboard', { replace: true });
+    }
+  }, [loading, user, isSuperAdminUser, location.pathname, navigate]);
 
   // Voice command handlers
   const handleVoiceCommand = (command, params) => {
