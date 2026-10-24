@@ -385,6 +385,100 @@ async function sendConsultationResponseMessage(record, actorUser) {
 }
 
 /**
+ * A scheduled video consultation is also an assignment: create an
+ * `assignments` row linking the client to the doctor so it shows up in the
+ * admin Assignments view, the doctor's assigned clients, and the client's
+ * care-team view. Idempotent — one row per telemedicine appointment, keyed
+ * in metadata.
+ */
+async function createConsultationAssignment(record, actorUser) {
+  try {
+    const clientUserId = await resolveCanonicalUserId(record.client_id);
+    const doctorUserId = await resolveCanonicalUserId(record.doctor_id);
+    if (!clientUserId || !doctorUserId) return null;
+
+    // Dedupe — one assignment per telemedicine appointment.
+    const existing = await db('assignments')
+      .whereRaw("metadata->>'telemedicineAppointmentId' = ?", [String(record.id)])
+      .first();
+    if (existing) return existing;
+
+    // assignments.client_id holds the clients-table row id (that's what the
+    // patient's row scope joins on), while patient_id holds the users.id.
+    let clientDocId = null;
+    if (UUID_RE.test(String(record.client_id))) {
+      const direct = await db('clients').where({ id: String(record.client_id) }).select('id').first();
+      if (direct) clientDocId = direct.id;
+    }
+    if (!clientDocId) {
+      const byUser = await db('clients').where({ user_id: clientUserId }).select('id').first();
+      clientDocId = byUser?.id || null;
+    }
+
+    const doctor = await getUserById(doctorUserId);
+    const clientUser = await getUserById(clientUserId);
+    const apptDate = record.appointment_date ? new Date(record.appointment_date) : null;
+    const validDate = apptDate && !isNaN(apptDate.getTime()) ? apptDate : null;
+    const now = new Date();
+
+    const [assignment] = await db('assignments').insert({
+      client_id: clientDocId || String(record.client_id),
+      patient_id: clientUserId,
+      client_name: record.client_name || displayName(clientUser),
+      client_email: clientUser?.email || null,
+      caregiver_id: doctorUserId,
+      caregiver_name: record.doctor_name || displayName(doctor),
+      caregiver_email: doctor?.email || null,
+      assigned_by: String(actorUser.id),
+      assigned_by_name: displayName(actorUser),
+      assigned_to_role: 'doctor',
+      assignment_type: 'video-consultation',
+      type: 'doctor',
+      title: 'Video Consultation',
+      description: record.reason || 'Scheduled video consultation',
+      start_date: validDate,
+      end_date: validDate,
+      due_date: validDate ? validDate.toISOString().slice(0, 10) : null,
+      due_time: validDate ? validDate.toTimeString().slice(0, 5) : null,
+      status: 'active',
+      institution_id: record.institution_id || actorUser.institution_id || doctor?.institution_id || null,
+      metadata: JSON.stringify({
+        telemedicineAppointmentId: record.id,
+        channelName: record.channel_name || null,
+      }),
+      created_at: now,
+      updated_at: now,
+    }).returning('*');
+
+    sseManager.emitTableEvent('assignments', assignment, {
+      userIds: [doctorUserId, clientUserId, String(actorUser.id)],
+      institutionId: assignment.institution_id,
+    });
+    return assignment;
+  } catch (err) {
+    logger.error('notificationDispatcher.createConsultationAssignment error:', err);
+    return null;
+  }
+}
+
+/**
+ * Keep the consultation's assignment row in step with the appointment —
+ * a cancelled/completed consultation shouldn't linger as an active
+ * assignment.
+ */
+async function syncConsultationAssignmentStatus(record) {
+  try {
+    if (!['cancelled', 'completed'].includes(record.status)) return;
+    await db('assignments')
+      .whereRaw("metadata->>'telemedicineAppointmentId' = ?", [String(record.id)])
+      .whereNot('status', record.status)
+      .update({ status: record.status, updated_at: new Date() });
+  } catch (err) {
+    logger.error('notificationDispatcher.syncConsultationAssignmentStatus error:', err);
+  }
+}
+
+/**
  * Main dispatch function — called after a record is created or updated.
  * Examines the table + record + action and creates appropriate notifications.
  *
@@ -515,6 +609,9 @@ async function dispatchTableNotifications(tableName, record, actorUser, action, 
           let conversationId = null;
           if (previousRecord?.status !== 'scheduled') {
             conversationId = await sendConsultationResponseMessage(record, actorUser);
+            // A scheduled consult is also a doctor assignment — create the
+            // assignments row so it shows in the admin/doctor/client views.
+            await createConsultationAssignment(record, actorUser);
           }
 
           // Notify doctor
@@ -543,6 +640,10 @@ async function dispatchTableNotifications(tableName, record, actorUser, action, 
               },
             });
           }
+        } else if (action === 'update' && ['cancelled', 'completed'].includes(record.status)) {
+          // Keep the linked assignment in step — a cancelled or finished
+          // consultation shouldn't linger as an active assignment.
+          await syncConsultationAssignmentStatus(record);
         }
         break;
       }
