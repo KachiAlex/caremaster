@@ -2263,7 +2263,18 @@ const InstitutionAdminDashboard = () => {
               participantType = 'pharmacist';
             }
           }
-          
+
+          // Fall back to the conversation's denormalized participant_details —
+          // clients and other non-staff participants aren't in the
+          // caregivers/pharmacists lists but their name is stored on the row.
+          if (participantName === 'Unknown User') {
+            const detail = (conv.participantDetails || []).find(p => p && p.id === otherParticipantId);
+            if (detail?.name) {
+              participantName = detail.name;
+              participantType = detail.role || participantType;
+            }
+          }
+
           // Get unread message count for this conversation using helper function
           const unreadCount = await getUnreadCountForConversation(conv.id, user.uid);
           
@@ -2377,7 +2388,18 @@ const InstitutionAdminDashboard = () => {
                 participantType = 'pharmacist';
               }
             }
-            
+
+            // Fall back to the conversation's denormalized participant_details —
+            // clients and other non-staff participants aren't in the
+            // caregivers/pharmacists lists but their name is stored on the row.
+            if (participantName === 'Unknown User') {
+              const detail = (conv.participantDetails || []).find(p => p && p.id === otherParticipantId);
+              if (detail?.name) {
+                participantName = detail.name;
+                participantType = detail.role || participantType;
+              }
+            }
+
             // Calculate unread count for this conversation (optimized query)
             const unreadCount = await getUnreadCountForConversation(conv.id, user.uid);
             
