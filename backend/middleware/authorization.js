@@ -180,6 +180,11 @@ const OWNER_COLUMN = {
   messages: 'conversation_id', // handled specially
 };
 
+// Column recording the ordering/owning doctor where it isn't named doctor_id.
+const DOCTOR_OWNER_COL = {
+  diagnostics: 'ordered_by',
+};
+
 // ─── Collaboration tables scoped by membership rather than an owner column ───
 // conversations/messages/calls/call_notifications/signaling are only visible
 // to participants (and same-institution admins). Handled before role branches.
@@ -710,8 +715,8 @@ async function scopeQuery(query, user, tableName) {
     const DOCTOR_OWNER_TABLES = ['telemedicine_appointments', 'telemedicine_calls', 'consultations', 'prescriptions', 'diagnostics'];
     if (DOCTOR_OWNER_TABLES.includes(tableName)) {
       const patientCol = OWNER_COLUMN[tableName] || 'patient_id';
-      // doctor_id = their id OR patient/client is in their patient list
-      query.where(`${tableName}.doctor_id`, user.id);
+      const doctorCol = DOCTOR_OWNER_COL[tableName] || 'doctor_id';
+      query.where(`${tableName}.${doctorCol}`, user.id);
       if (patientIds.length > 0) {
         query.orWhereIn(`${tableName}.${patientCol}`, patientIds);
       }
@@ -916,7 +921,7 @@ async function canModifyRecord(user, tableName, record) {
     // doctor on the record OR the patient is one of their patients
     const DOCTOR_OWNER_TABLES = ['telemedicine_appointments', 'telemedicine_calls', 'consultations', 'prescriptions', 'diagnostics'];
     if (DOCTOR_OWNER_TABLES.includes(tableName)) {
-      if (record.doctor_id === user.id) return true;
+      if (record[DOCTOR_OWNER_COL[tableName] || 'doctor_id'] === user.id) return true;
       const patientIds = await getDoctorPatientIds(user.id);
       const col = OWNER_COLUMN[tableName] || 'patient_id';
       return patientIds.includes(record[col]);
