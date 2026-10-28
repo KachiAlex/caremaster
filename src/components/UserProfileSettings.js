@@ -16,12 +16,14 @@ import {
   AlertCircle,
   CheckCircle,
   Edit2,
-  Bell
+  Bell,
+  Mic
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
 import ProfilePicture from './ProfilePicture';
 import NotificationPreferences from './NotificationPreferences';
+import DeviceSettingsModal from './DeviceSettingsModal';
 import { updateDoc, doc } from 'backend/database';
 import { updatePassword, reauthenticateWithCredential, updateEmail } from 'backend/auth';
 import { uploadBytes, getDownloadURL } from 'backend/storage';
@@ -361,6 +363,17 @@ const UserProfileSettings = ({ userId, onClose }) => {
             >
               <Bell className="h-4 w-4 inline mr-2" />
               Notifications
+            </button>
+            <button
+              onClick={() => setActiveTab('devices')}
+              className={`py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
+                activeTab === 'devices'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Mic className="h-4 w-4 inline mr-2" />
+              Call Devices
             </button>
           </nav>
         </div>
@@ -746,6 +759,10 @@ const UserProfileSettings = ({ userId, onClose }) => {
           {/* Notifications Tab */}
           {activeTab === 'notifications' && (
             <NotificationPreferences userId={userId || userProfile?.id || user?.uid} />
+          )}
+
+          {activeTab === 'devices' && (
+            <DeviceSettingsModal isOpen onClose={() => setActiveTab('profile')} />
           )}
         </div>
 

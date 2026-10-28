@@ -100,6 +100,28 @@ class CallService {
     }
   }
 
+  // Ring the other party of a scheduled consultation. The calls row's
+  // call_id is `consult_<appointmentId>__<ts>`; the backend creates the
+  // callee's 'incoming' notification on insert, and accepting routes into the
+  // consult screen instead of the generic chat-call WebRTC flow.
+  async ringConsultation({ appointmentId, callerId, recipientId, callType = 'video', callerName, recipientName }) {
+    const callId = `consult_${appointmentId}__${Date.now()}`;
+    await addDoc(collection(db, 'calls'), {
+      callId,
+      callerId,
+      recipientId,
+      callType,
+      callerName: callerName || null,
+      recipientName: recipientName || null,
+      status: 'initiating',
+      createdAt: serverTimestamp(),
+      answeredAt: null,
+      endedAt: null,
+      duration: 0
+    });
+    return callId;
+  }
+
   // Answer a call — lookups and writes are parallelized so the caller sees
   // the 'answered' flip in ~2 round-trips instead of ~5 on slow links.
   async answerCall(callId, recipientId) {

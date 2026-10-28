@@ -116,6 +116,13 @@ const GlobalCallHandler = () => {
   // side's camera/mic permission prompt.
   const handleAcceptCall = async () => {
     if (!incomingCall) return;
+    if (incomingCall.callId.startsWith('consult_')) {
+      const appointmentId = incomingCall.callId.slice('consult_'.length).split('__')[0];
+      await callService.answerCall(incomingCall.callId, myId);
+      setIncomingCall(null);
+      window.location.href = `/telemedicine?consult=${appointmentId}`;
+      return;
+    }
     try {
       const svc = new WebRTCService();
       await Promise.all([

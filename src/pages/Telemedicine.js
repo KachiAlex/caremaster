@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Video,
   Phone,
@@ -18,10 +19,15 @@ import DocumentManager from '../components/DocumentManager';
 import ConsultationCall from '../components/ConsultationCall';
 import { auth } from '../backend/config';
 import { useUser } from '../contexts/UserContext';
+import CallService from '../services/callService';
+
+const callService = new CallService();
 
 const Telemedicine = () => {
   const [user, userLoading] = useAuthState(auth);
   const { userProfile } = useUser();
+  const [searchParams] = useSearchParams();
+  const autoConsultRef = useRef(false);
   const [appointments, setAppointments] = useState([]);
   // The appointment the user is currently in a video call for (or null)
   const [activeCall, setActiveCall] = useState(null);
@@ -49,6 +55,15 @@ const Telemedicine = () => {
       loadTelemedicineData();
     }
   }, [user, userLoading]);
+
+  useEffect(() => {
+    const consultId = searchParams.get('consult');
+    if (!consultId || autoConsultRef.current) return;
+    const appointment = appointments.find(a => a.id === consultId);
+    if (!appointment) return;
+    autoConsultRef.current = true;
+    startCall(appointment);
+  }, [appointments, searchParams]);
 
   const loadTelemedicineData = async () => {
     try {
@@ -83,6 +98,16 @@ const Telemedicine = () => {
   // Both parties join the deterministic channel consult_<appointmentId>.
   const startCall = async (appointment) => {
     setActiveCall(appointment);
+    if (!isDoctor && appointment.doctorId) {
+      callService.ringConsultation({
+        appointmentId: appointment.id,
+        callerId: myUserId,
+        recipientId: appointment.doctorId,
+        callType: appointment.type || 'video',
+        callerName: userProfile?.name || userProfile?.displayName || 'Client',
+        recipientName: appointment.doctorName || 'Doctor'
+      }).catch(err => console.warn('Failed to ring doctor for consultation:', err));
+    }
     // Record the call session (marks the appointment in-progress)
     try {
       const callResult = await telemedicineAPI.startCall(appointment.id, {
