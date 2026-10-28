@@ -8,6 +8,8 @@ import { buildConstraints } from '../services/deviceSettingsService';
 import DeviceSettingsModal from './DeviceSettingsModal';
 import { useUser } from '../contexts/UserContext';
 import telemedicineAPI from '../api/telemedicineAPI';
+import { collection, query, where, getDocs } from 'backend/database';
+import { db } from '../backend/config';
 
 /**
  * WebRTC video call for scheduled telemedicine consultations.
@@ -124,6 +126,12 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
       // Media first so the offer/answer carries tracks
       await svc.getUserMedia(buildConstraints('video'));
 
+      // Rows already on the channel belong to earlier attempts. Replaying them
+      // (e.g. a stale 'end') would end this call immediately, so skip them.
+      const staleIds = new Set(
+        (await getDocs(query(collection(db, 'signaling'), where('callId', '==', channelName)))).docs.map(d => d.id)
+      );
+
       // Announce presence — the peer sees this via the signaling poll
       await svc.sendSignalingMessage('presence', { role });
 
@@ -140,6 +148,7 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
 
       unsubRef.current = svc.listenForSignaling(channelName, async (msg) => {
         try {
+          if (staleIds.has(msg.id)) return;
           if (msg.type === 'presence') {
             // Only the doctor initiates — send offer once peer is present
             if (isDoctor && !offerSentRef.current) {
