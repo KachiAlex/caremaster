@@ -26,6 +26,7 @@ const callService = new CallService();
 
 const Telemedicine = () => {
   const [user, userLoading] = useAuthState(auth);
+  const userKey = user?.uid || user?.id;
   const { userProfile } = useUser();
   const [searchParams] = useSearchParams();
   const autoConsultRef = useRef(false);
@@ -55,7 +56,7 @@ const Telemedicine = () => {
     if (user && !userLoading) {
       loadTelemedicineData();
     }
-  }, [user, userLoading]);
+  }, [userKey, userLoading]);
 
   const refreshAppointments = async () => {
     if (!myUserId) return;
@@ -76,7 +77,7 @@ const Telemedicine = () => {
       unsubscribe();
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [user, userLoading]);
+  }, [userKey, userLoading]);
 
   useEffect(() => {
     const consultId = searchParams.get('consult');
@@ -293,7 +294,7 @@ const Telemedicine = () => {
     );
   }
 
-  if (loading) {
+  if (loading && !activeCall) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
