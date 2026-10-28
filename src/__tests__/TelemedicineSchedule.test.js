@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Telemedicine from '../pages/Telemedicine';
 import telemedicineAPI from '../api/telemedicineAPI';
@@ -47,9 +47,10 @@ describe('client Telemedicine schedule', () => {
   test('reloads appointments when the schedule changes', async () => {
     telemedicineAPI.getAppointments.mockResolvedValueOnce([]).mockResolvedValueOnce([scheduled]);
     render(<MemoryRouter><Telemedicine /></MemoryRouter>);
-    await waitFor(() => expect(telemedicineAPI.getAppointments).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(document.querySelector('.animate-spin')).toBeNull());
     const onChange = sseService.subscribe.mock.calls.find(([table]) => table === 'telemedicine_appointments')[1];
-    onChange();
+    act(() => { onChange(); });
+    expect(document.querySelector('.animate-spin')).toBeNull();
     expect((await screen.findAllByText(/Chinyere/)).length).toBeGreaterThan(0);
     expect(telemedicineAPI.getAppointments).toHaveBeenCalledTimes(2);
   });

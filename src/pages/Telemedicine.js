@@ -57,10 +57,20 @@ const Telemedicine = () => {
     }
   }, [user, userLoading]);
 
+  const refreshAppointments = async () => {
+    if (!myUserId) return;
+    try {
+      const data = await telemedicineAPI.getAppointments(myUserId, userType);
+      setAppointments(data.map(a => telemedicineAPI.formatAppointmentForDisplay(a)));
+    } catch (error) {
+      console.error('Error refreshing telemedicine data:', error);
+    }
+  };
+
   useEffect(() => {
     if (!user || userLoading) return undefined;
-    const unsubscribe = sseService.subscribe('telemedicine_appointments', () => loadTelemedicineData());
-    const onVisible = () => { if (document.visibilityState === 'visible') loadTelemedicineData(); };
+    const unsubscribe = sseService.subscribe('telemedicine_appointments', refreshAppointments);
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshAppointments(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       unsubscribe();
