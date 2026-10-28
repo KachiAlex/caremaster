@@ -128,9 +128,11 @@ const GlobalCallHandler = () => {
     if (!incomingCall) return;
     if (incomingCall.callId.startsWith('consult_')) {
       const appointmentId = incomingCall.callId.slice('consult_'.length).split('__')[0];
+      const onThisConsult = window.location.pathname.startsWith('/service-provider/telemedicine') &&
+        new URLSearchParams(window.location.search).get('consult') === appointmentId;
       await callService.answerCall(incomingCall.callId, myId);
       setIncomingCall(null);
-      window.location.href = `/service-provider/telemedicine?consult=${appointmentId}`;
+      if (!onThisConsult) window.location.href = `/service-provider/telemedicine?consult=${appointmentId}`;
       return;
     }
     try {
