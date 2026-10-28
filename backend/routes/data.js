@@ -152,7 +152,12 @@ function resolveTable(collectionName) {
 const SSE_REALTIME_TABLES = new Set([
   'signaling', 'callNotifications', 'calls', 'messages', 'conversations',
   'careLogs', 'careTasks', 'assignments', 'appointments', 'notifications',
+  'telemedicine_appointments',
 ]);
+
+// Clinical rows that are pushed only to the users on the record, never to the
+// whole institution.
+const SSE_USER_SCOPED_TABLES = new Set(['telemedicine_appointments']);
 
 // Derive target user IDs from a record for a given table.
 function getEventUserIds(tableName, record) {
@@ -189,6 +194,9 @@ function getEventUserIds(tableName, record) {
     case 'notifications':
       add(record.user_id); add(record.recipient_id);
       break;
+    case 'telemedicine_appointments':
+      add(record.client_id); add(record.doctor_id); add(record.requested_by);
+      break;
     default:
       break;
   }
@@ -197,7 +205,7 @@ function getEventUserIds(tableName, record) {
 
 function emitDataEvent(req, tableName, record) {
   if (!SSE_REALTIME_TABLES.has(tableName)) return;
-  const institutionId = req.user?.institution_id || req.user?.institutionId;
+  const institutionId = SSE_USER_SCOPED_TABLES.has(tableName) ? null : (req.user?.institution_id || req.user?.institutionId);
   const userIds = getEventUserIds(tableName, record);
   sseManager.emitTableEvent(tableName, record, { userIds, institutionId });
 }

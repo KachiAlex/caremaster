@@ -20,6 +20,7 @@ import ConsultationCall from '../components/ConsultationCall';
 import { auth } from '../backend/config';
 import { useUser } from '../contexts/UserContext';
 import CallService from '../services/callService';
+import { sseService } from '../services/sseService';
 
 const callService = new CallService();
 
@@ -54,6 +55,17 @@ const Telemedicine = () => {
     if (user && !userLoading) {
       loadTelemedicineData();
     }
+  }, [user, userLoading]);
+
+  useEffect(() => {
+    if (!user || userLoading) return undefined;
+    const unsubscribe = sseService.subscribe('telemedicine_appointments', () => loadTelemedicineData());
+    const onVisible = () => { if (document.visibilityState === 'visible') loadTelemedicineData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      unsubscribe();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [user, userLoading]);
 
   useEffect(() => {
