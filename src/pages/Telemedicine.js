@@ -81,12 +81,24 @@ const Telemedicine = () => {
 
   useEffect(() => {
     const consultId = searchParams.get('consult');
-    if (!consultId || autoConsultRef.current) return;
+    if (!consultId || searchParams.get('accepted') !== '1' || autoConsultRef.current) return;
     const appointment = appointments.find(a => a.id === consultId);
     if (!appointment) return;
     autoConsultRef.current = true;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('accepted');
+    window.history.replaceState(null, '', url.pathname + url.search);
     startCall(appointment);
   }, [appointments, searchParams]);
+
+  useEffect(() => {
+    const onAccepted = (event) => {
+      const appointment = appointments.find(a => a.id === event.detail.appointmentId);
+      if (appointment && !activeCall) startCall(appointment);
+    };
+    window.addEventListener('consult-accepted', onAccepted);
+    return () => window.removeEventListener('consult-accepted', onAccepted);
+  }, [appointments, activeCall]);
 
   const loadTelemedicineData = async () => {
     try {
@@ -120,6 +132,7 @@ const Telemedicine = () => {
   // Open the WebRTC consultation call for a scheduled appointment.
   // Both parties join the deterministic channel consult_<appointmentId>.
   const startCall = async (appointment) => {
+    if (!isDoctor) await callService.cleanupSignalingRecords(`consult_${appointment.id}`);
     setActiveCall(appointment);
     if (!isDoctor && appointment.doctorId) {
       callService.ringConsultation({

@@ -132,7 +132,11 @@ const GlobalCallHandler = () => {
         new URLSearchParams(window.location.search).get('consult') === appointmentId;
       await callService.answerCall(incomingCall.callId, myId);
       setIncomingCall(null);
-      if (!onThisConsult) window.location.href = `/service-provider/telemedicine?consult=${appointmentId}`;
+      if (onThisConsult) {
+        window.dispatchEvent(new CustomEvent('consult-accepted', { detail: { appointmentId } }));
+      } else {
+        window.location.href = `/service-provider/telemedicine?consult=${appointmentId}&accepted=1`;
+      }
       return;
     }
     try {
