@@ -29,7 +29,7 @@ const Telemedicine = () => {
   const userKey = user?.uid || user?.id;
   const { userProfile } = useUser();
   const [searchParams] = useSearchParams();
-  const autoConsultRef = useRef(false);
+  const autoConsultRef = useRef(null);
   const [appointments, setAppointments] = useState([]);
   // The appointment the user is currently in a video call for (or null)
   const [activeCall, setActiveCall] = useState(null);
@@ -81,10 +81,10 @@ const Telemedicine = () => {
 
   useEffect(() => {
     const consultId = searchParams.get('consult');
-    if (!consultId || searchParams.get('accepted') !== '1' || autoConsultRef.current) return;
+    if (!consultId || searchParams.get('accepted') !== '1' || autoConsultRef.current === consultId) return;
     const appointment = appointments.find(a => a.id === consultId);
     if (!appointment) return;
-    autoConsultRef.current = true;
+    autoConsultRef.current = consultId;
     const url = new URL(window.location.href);
     url.searchParams.delete('accepted');
     window.history.replaceState(null, '', url.pathname + url.search);

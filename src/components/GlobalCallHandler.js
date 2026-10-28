@@ -135,7 +135,8 @@ const GlobalCallHandler = () => {
       if (onThisConsult) {
         window.dispatchEvent(new CustomEvent('consult-accepted', { detail: { appointmentId } }));
       } else {
-        window.location.href = `/service-provider/telemedicine?consult=${appointmentId}&accepted=1`;
+        window.history.pushState(null, '', `/service-provider/telemedicine?consult=${appointmentId}&accepted=1`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
       return;
     }
