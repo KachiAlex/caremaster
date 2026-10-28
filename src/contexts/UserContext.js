@@ -145,7 +145,7 @@ export const UserProvider = ({ children }) => {
         const { token, user: userData } = response.data.data;
         
         // Store token and user data
-        localStorage.setItem('token', token);
+        if (token) localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
         
         // Update state

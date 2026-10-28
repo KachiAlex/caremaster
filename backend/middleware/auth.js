@@ -26,7 +26,8 @@ async function getAccessiblePatientIds(user) {
 const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
-    const bearerToken = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const rawBearer = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const bearerToken = rawBearer && rawBearer !== 'undefined' && rawBearer !== 'null' ? rawBearer : null;
     // EventSource cannot set custom headers, so allow token via query string
     const token = bearerToken || req.query?.token || req.cookies?.token;
 
