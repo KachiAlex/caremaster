@@ -113,6 +113,7 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
           }
           if (state === 'failed' || state === 'closed') {
             setPhase('ended');
+            setTimeout(() => { if (mounted) { cleanup(); onEnd?.(0); } }, 2000);
           }
         },
         onStatsUpdate: (stats) => {

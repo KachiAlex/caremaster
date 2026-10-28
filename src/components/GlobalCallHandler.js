@@ -45,6 +45,11 @@ const GlobalCallHandler = () => {
     setCallConnectionState(null);
   };
 
+  const endActiveCall = () => {
+    cleanupCall();
+    setActiveCall(null);
+  };
+
   const setupWebrtcCallbacks = (svc) => {
     svc.setCallbacks({
       onLocalStream: (stream) => { localStreamRef.current = stream; setLocalStream(stream); },
@@ -53,11 +58,14 @@ const GlobalCallHandler = () => {
         setRemoteStream(stream);
         setCallConnectionState('connected');
       },
-      onCallEnded: () => cleanupCall(),
+      onCallEnded: endActiveCall,
       onCallStateChange: (state) => {
         if (state === 'connected') {
           setCallConnectionState('connected');
-        } else if (state === 'failed' || state === 'closed' || state === 'disconnected') {
+        } else if (state === 'failed' || state === 'closed') {
+          setCallConnectionState('ended');
+          setTimeout(() => { if (webrtcRef.current === svc) endActiveCall(); }, 2000);
+        } else if (state === 'disconnected') {
           setCallConnectionState('ended');
         }
       },

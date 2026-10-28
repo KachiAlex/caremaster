@@ -197,11 +197,14 @@ const Messages = ({
         setRemoteStream(stream);
         setCallConnectionState('connected');
       },
-      onCallEnded: () => cleanupCall(),
+      onCallEnded: () => { cleanupCall(); setActiveCall(null); },
       onCallStateChange: (state) => {
         if (state === 'connected') {
           setCallConnectionState('connected');
-        } else if (state === 'failed' || state === 'closed' || state === 'disconnected') {
+        } else if (state === 'failed' || state === 'closed') {
+          setCallConnectionState('ended');
+          setTimeout(() => svc.endCall().catch(() => {}), 2000);
+        } else if (state === 'disconnected') {
           setCallConnectionState('ended');
         }
       },
