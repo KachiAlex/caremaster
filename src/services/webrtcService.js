@@ -119,7 +119,7 @@ class WebRTCService {
       return true;
     } catch (error) {
       console.error('Failed to initialize WebRTC service:', error);
-      return false;
+      throw error;
     }
   }
 
@@ -178,9 +178,32 @@ class WebRTCService {
   }
 
   // Get user media (camera and microphone)
+  // Try the requested devices first, then the same request without saved
+  // deviceIds (a stale or missing camera/mic), then audio only (no camera).
+  async acquireMedia(constraints) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (error) {
+      const withoutDeviceIds = (c) => ({
+        video: c.video && typeof c.video === 'object' ? { ...c.video, deviceId: undefined } : c.video,
+        audio: c.audio && typeof c.audio === 'object' ? { ...c.audio, deviceId: undefined } : c.audio,
+      });
+      const fallbacks = [withoutDeviceIds(constraints), { video: false, audio: true }];
+      console.warn('getUserMedia failed, retrying with fallback constraints:', error.name, error.message);
+      for (const fallback of fallbacks) {
+        try {
+          return await navigator.mediaDevices.getUserMedia(fallback);
+        } catch (fallbackError) {
+          error = fallbackError;
+        }
+      }
+      throw error;
+    }
+  }
+
   async getUserMedia(constraints = { video: true, audio: true }) {
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      this.localStream = await this.acquireMedia(constraints);
 
       // Add tracks to peer connection
       this.localStream.getTracks().forEach(track => {
