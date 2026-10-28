@@ -4,6 +4,7 @@ import { useUser } from '../contexts/UserContext';
 import CallService from '../services/callService';
 import CallInterface from './CallInterface';
 import WebRTCService from '../services/webrtcService';
+import DeviceSettingsModal from './DeviceSettingsModal';
 
 /**
  * App-wide incoming-call handler. Mounted once inside UserProvider so any
@@ -23,6 +24,7 @@ const GlobalCallHandler = () => {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [callConnectionState, setCallConnectionState] = useState(null);
+  const [showDevices, setShowDevices] = useState(false);
   const signalingUnsubRef = useRef(null);
   // Refs mirror the state above so cleanup paths (signaling callbacks,
   // unmount, pagehide) never operate on stale null closures.
@@ -202,6 +204,7 @@ const GlobalCallHandler = () => {
           isIncoming={true}
           onCallAccepted={handleAcceptCall}
           onCallRejected={handleRejectCall}
+          onOpenDeviceSettings={() => setShowDevices(true)}
         />
       )}
 
@@ -220,8 +223,11 @@ const GlobalCallHandler = () => {
           externalCallState={callConnectionState}
           localStream={localStream}
           remoteStream={remoteStream}
+          onOpenDeviceSettings={() => setShowDevices(true)}
         />
       )}
+
+      <DeviceSettingsModal isOpen={showDevices} onClose={() => setShowDevices(false)} />
     </>
   );
 };

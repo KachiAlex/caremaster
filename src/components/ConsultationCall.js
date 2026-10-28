@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  Video, VideoOff, Mic, MicOff, PhoneOff, Loader2, Camera, User
+  Video, VideoOff, Mic, MicOff, PhoneOff, Loader2, Camera, User, Settings
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import WebRTCService from '../services/webrtcService';
 import { buildConstraints } from '../services/deviceSettingsService';
+import DeviceSettingsModal from './DeviceSettingsModal';
 import { useUser } from '../contexts/UserContext';
 import telemedicineAPI from '../api/telemedicineAPI';
 
@@ -25,6 +26,7 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [duration, setDuration] = useState(0);
+  const [showDevices, setShowDevices] = useState(false);
   const [networkStats, setNetworkStats] = useState({ rtt: 0, packetLoss: 0, quality: 'good' });
   const [peerName] = useState(isDoctor
     ? (appointment.clientName || 'Client')
@@ -296,6 +298,13 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
           {isVideoOn ? <Video className="h-5 w-5 text-white" /> : <VideoOff className="h-5 w-5 text-white" />}
         </button>
         <button
+          onClick={() => setShowDevices(true)}
+          className="p-4 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+          title="Device Settings"
+        >
+          <Settings className="h-5 w-5 text-white" />
+        </button>
+        <button
           onClick={hangUp}
           className="p-4 rounded-full bg-red-600 hover:bg-red-700 transition-colors"
           title="End consultation"
@@ -303,6 +312,7 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
           <PhoneOff className="h-5 w-5 text-white" />
         </button>
       </div>
+      <DeviceSettingsModal isOpen={showDevices} onClose={() => setShowDevices(false)} />
     </div>
   );
 };

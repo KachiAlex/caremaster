@@ -24,6 +24,7 @@ import { getAllUsers } from '../api/usersAPI';
 import { toast } from 'react-toastify';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
+import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import WebRTCService from '../services/webrtcService';
 import { buildConstraints } from '../services/deviceSettingsService';
 import { collection, query, where, onSnapshot } from 'backend/database';
@@ -66,6 +67,7 @@ const Messages = ({
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [callConnectionState, setCallConnectionState] = useState(null);
+  const [showDevices, setShowDevices] = useState(false);
   const signalingUnsubRef = useRef(null);
   const callStatusUnsubRef = useRef(null);
   const callTimeoutRef = useRef(null);
@@ -664,8 +666,10 @@ const Messages = ({
           externalCallState={callConnectionState}
           localStream={localStream}
           remoteStream={remoteStream}
+          onOpenDeviceSettings={() => setShowDevices(true)}
         />
       )}
+      <DeviceSettingsModal isOpen={showDevices} onClose={() => setShowDevices(false)} />
 
       {/* New Chat Modal */}
       {showNewChat && (

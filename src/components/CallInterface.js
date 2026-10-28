@@ -482,6 +482,15 @@ const CallInterface = ({
                       <h2 className="text-xl md:text-2xl font-semibold mb-2">Incoming Call</h2>
                       <p className="text-lg md:text-xl mb-6">{participantInfo?.name}</p>
                       <div className="flex space-x-6 md:space-x-4 justify-center">
+                        {onOpenDeviceSettings && (
+                          <button
+                            onClick={onOpenDeviceSettings}
+                            title="Device Settings"
+                            className="w-20 h-20 md:w-16 md:h-16 bg-gray-600 rounded-full flex items-center justify-center hover:bg-gray-700 active:bg-gray-800 transition-colors touch-manipulation"
+                          >
+                            <Settings className="text-white" size={28} />
+                          </button>
+                        )}
                         <button
                           onClick={handleRejectCall}
                           className="w-20 h-20 md:w-16 md:h-16 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 active:bg-red-700 transition-colors touch-manipulation"
