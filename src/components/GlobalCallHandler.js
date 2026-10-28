@@ -130,7 +130,7 @@ const GlobalCallHandler = () => {
       const appointmentId = incomingCall.callId.slice('consult_'.length).split('__')[0];
       await callService.answerCall(incomingCall.callId, myId);
       setIncomingCall(null);
-      window.location.href = `/telemedicine?consult=${appointmentId}`;
+      window.location.href = `/service-provider/telemedicine?consult=${appointmentId}`;
       return;
     }
     try {
