@@ -343,8 +343,9 @@ async function sendConsultationResponseMessage(record, actorUser) {
 
     const doctorName = record.doctor_name || 'a doctor';
     const apptDate = record.appointment_date ? new Date(record.appointment_date) : null;
+    const apptTz = process.env.APP_TIMEZONE || 'Africa/Lagos';
     const dateStr = apptDate && !isNaN(apptDate.getTime())
-      ? `${apptDate.toLocaleDateString()} at ${apptDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+      ? `${apptDate.toLocaleDateString([], { timeZone: apptTz })} at ${apptDate.toLocaleTimeString([], { timeZone: apptTz, hour: '2-digit', minute: '2-digit' })}`
       : 'a time to be confirmed';
     const text = `Your video consultation has been scheduled with ${doctorName} on ${dateStr} (${record.duration || 30} min). Reply here if you need to reschedule.`;
 

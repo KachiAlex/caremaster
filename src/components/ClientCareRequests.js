@@ -241,7 +241,7 @@ const ClientCareRequests = ({ institutionId }) => {
       ? new Date(request.appointmentDate?.toDate ? request.appointmentDate.toDate() : request.appointmentDate)
       : null;
     const dateStr = date && !isNaN(date.getTime())
-      ? date.toISOString().split('T')[0]
+      ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
       : '';
     const timeStr = date && !isNaN(date.getTime())
       ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
