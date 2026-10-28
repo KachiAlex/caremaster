@@ -958,7 +958,8 @@ router.get('/:table/:id', async (req, res) => {
     }
 
     // Row-level authorization: verify the user can see this specific record
-    const canAccess = await canModifyRecord(req.user, tableName, record);
+    const ownInstitution = tableName === 'institutions' && String(record.id) === String(req.user.institution_id);
+    const canAccess = ownInstitution || await canModifyRecord(req.user, tableName, record);
     if (!canAccess) {
       return res.status(403).json({ success: false, message: 'You do not have access to this record' });
     }
