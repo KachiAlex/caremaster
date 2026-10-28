@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Video, VideoOff, Mic, MicOff, PhoneOff, Loader2, Camera, User, Settings
 } from 'lucide-react';
@@ -195,10 +196,10 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
 
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
+  return createPortal(
+    <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col h-[100dvh] w-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-gray-800">
+      <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-gray-800">
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
             <User className="h-5 w-5 text-white" />
@@ -237,7 +238,7 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
       </div>
 
       {/* Video area */}
-      <div className="flex-1 relative bg-black">
+      <div className="flex-1 min-h-0 relative bg-black">
         <video
           ref={remoteVideoRef}
           autoPlay
@@ -265,7 +266,7 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
         )}
 
         {/* Local PiP */}
-        <div className="absolute bottom-6 right-6 w-40 h-28 bg-gray-800 rounded-lg overflow-hidden border-2 border-white shadow-lg">
+        <div className="absolute bottom-4 right-4 w-28 h-20 sm:bottom-6 sm:right-6 sm:w-40 sm:h-28 bg-gray-800 rounded-lg overflow-hidden border-2 border-white shadow-lg">
           <video
             ref={localVideoRef}
             autoPlay
@@ -283,7 +284,7 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-center space-x-4 py-5 bg-gray-800">
+      <div className="shrink-0 flex items-center justify-center space-x-4 py-4 sm:py-5 bg-gray-800 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button
           onClick={toggleAudio}
           className={`p-4 rounded-full transition-colors ${isMuted ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-700 hover:bg-gray-600'}`}
@@ -314,7 +315,8 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
         </button>
       </div>
       <DeviceSettingsModal isOpen={showDevices} onClose={() => setShowDevices(false)} />
-    </div>
+    </div>,
+    document.body
   );
 };
 
