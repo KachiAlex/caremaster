@@ -533,7 +533,13 @@ async function scopeQuery(query, user, tableName) {
   if (ADMIN_ROLES.includes(userType)) {
     const hasInstitutionId = await tableHasColumn(tableName, 'institution_id');
     if (hasInstitutionId) {
-      if (tableName === 'telemedicine_appointments') {
+      if (tableName === 'notifications') {
+        const identityIds = await getUserIdentityIds(user.id);
+        query.where(function() {
+          this.where(`${tableName}.institution_id`, user.institution_id)
+            .orWhereIn(`${tableName}.user_id`, identityIds);
+        });
+      } else if (tableName === 'telemedicine_appointments') {
         // Requests from standalone (unaffiliated) clients have no tenant —
         // without this they are invisible to every admin and can never be
         // scheduled.
