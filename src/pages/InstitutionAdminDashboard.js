@@ -3021,14 +3021,14 @@ const renderMessagesTab = () => {
                       {!isInCall ? (
                         <>
                           <button
-                            onClick={startVoiceCall}
+                            onClick={() => startVoiceCall()}
                             className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                             title="Voice Call"
                           >
                             <Phone className="h-5 w-5" />
                           </button>
                           <button
-                            onClick={startVideoCall}
+                            onClick={() => startVideoCall()}
                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Video Call"
                           >
