@@ -42,6 +42,13 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  const [needsAudioTap, setNeedsAudioTap] = useState(false);
+  const playRemote = useCallback(() => {
+    const els = [remoteVideoRef.current, remoteAudioRef.current].filter(Boolean);
+    return Promise.all(els.map(el => el.play()))
+      .then(() => setNeedsAudioTap(false))
+      .catch(() => setNeedsAudioTap(true));
+  }, []);
 
   const channelName = `consult_${appointment.id}`;
 
@@ -97,8 +104,8 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
           }
           if (remoteAudioRef.current) {
             remoteAudioRef.current.srcObject = stream;
-            remoteAudioRef.current.play().catch(() => {});
           }
+          playRemote();
           if (!remoteAttachedRef.current) {
             remoteAttachedRef.current = true;
             setPhase('connected');
@@ -263,6 +270,15 @@ const ConsultationCall = ({ appointment, role, onEnd }) => {
               )}
             </div>
           </div>
+        )}
+
+        {needsAudioTap && (
+          <button
+            onClick={playRemote}
+            className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 text-white text-lg"
+          >
+            Tap to hear {peerName}
+          </button>
         )}
 
         {/* Local PiP */}
