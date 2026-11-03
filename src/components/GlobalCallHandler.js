@@ -5,6 +5,7 @@ import CallService from '../services/callService';
 import CallInterface from './CallInterface';
 import WebRTCService from '../services/webrtcService';
 import DeviceSettingsModal from './DeviceSettingsModal';
+import { startRingtone, stopRingtone, playConnectedChime } from '../services/callSoundService';
 
 /**
  * App-wide incoming-call handler. Mounted once inside UserProvider so any
@@ -25,6 +26,23 @@ const GlobalCallHandler = () => {
   const [remoteStream, setRemoteStream] = useState(null);
   const [callConnectionState, setCallConnectionState] = useState(null);
   const [showDevices, setShowDevices] = useState(false);
+
+  useEffect(() => {
+    if (!incomingCall) return undefined;
+    startRingtone();
+    const safety = setTimeout(() => setIncomingCall(null), 60000);
+    return () => {
+      stopRingtone();
+      clearTimeout(safety);
+    };
+  }, [incomingCall]);
+
+  useEffect(() => {
+    if (callConnectionState === 'connected') {
+      playConnectedChime();
+      toast.success('Call connected');
+    }
+  }, [callConnectionState]);
   const signalingUnsubRef = useRef(null);
   // Refs mirror the state above so cleanup paths (signaling callbacks,
   // unmount, pagehide) never operate on stale null closures.

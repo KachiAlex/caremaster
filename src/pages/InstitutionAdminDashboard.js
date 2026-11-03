@@ -398,6 +398,7 @@ const InstitutionAdminDashboard = () => {
   const messagesEndRef = React.useRef(null);
   const localVideoRef = React.useRef(null);
   const remoteVideoRef = React.useRef(null);
+  const remoteAudioRef = React.useRef(null);
   const [showMobileChatPane, setShowMobileChatPane] = useState(false);
   const [isNarrowMessagingLayout, setIsNarrowMessagingLayout] = useState(false);
   const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
@@ -2458,6 +2459,10 @@ const InstitutionAdminDashboard = () => {
     if (isInCall && remoteStream && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
+    if (isInCall && remoteStream && remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play().catch((err) => console.error("Remote audio playback blocked:", err));
+    }
   }, [isInCall, remoteStream]);
 
   // Incoming calls are handled app-wide by GlobalCallHandler (mounted in App).
@@ -3069,6 +3074,7 @@ const renderMessagesTab = () => {
 
                     {/* Call content */}
                     <div className="flex-1 flex items-center justify-center relative">
+                      <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
                       {callType === 'video' ? (
                         <div className="w-full h-full relative">
                           {/* Remote video (full screen) */}
